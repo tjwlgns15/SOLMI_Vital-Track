@@ -151,6 +151,9 @@
 
 	SubjectCard.prototype._render = function () {
 		var badgeClass = this.subject.type === "HUMAN" ? "badge-human" : "badge-animal";
+		// 활동 수준(정지/보행/활발한 움직임)·이상행동 경고는 동물(ANIMAL) 대상에만 서버가 분석해
+		// 보내주므로, 사람 대상 카드에는 아예 해당 UI를 만들지 않는다 (서버 쪽 게이팅과 대칭).
+		var isAnimal = this.subject.type === "ANIMAL";
 		var card = document.createElement("div");
 		card.className = "subject-card";
 		card.id = "subject-card-" + this.subject.id;
@@ -159,10 +162,12 @@
 			'  <div><span class="status-dot offline"></span><span class="name"></span> ' +
 			'  <span class="badge ' + badgeClass + '"></span></div>' +
 			'</div>' +
+			(isAnimal ? '<div class="activity-alert" style="display:none;"></div>' : '') +
 			'<div class="vitals-row">' +
 			'  <div>ECG <div class="value ecg-status">대기 중</div></div>' +
 			'  <div>속도 <div class="value velocity-value">-</div></div>' +
 			'  <div>위치 <div class="value loc-status">-</div></div>' +
+			(isAnimal ? '  <div>활동 <div class="value activity-status">-</div></div>' : '') +
 			'</div>' +
 			'<canvas class="ecg-canvas" width="400" height="90"></canvas>' +
 			'<div class="accel-charts">' +
@@ -239,6 +244,30 @@
 		this.markLive();
 		this.lastVelocity = speed;
 		this.element.querySelector(".velocity-value").textContent = speed.toFixed(2) + " m/s";
+	};
+
+	/** 동물 대상 카드에만 있는 활동 수준 배지를 갱신한다 (사람 카드는 해당 엘리먼트가 없어 아무 일도 안 함). */
+	SubjectCard.prototype.onActivity = function (status) {
+		var el = this.element.querySelector(".activity-status");
+		if (!el) {
+			return;
+		}
+		el.textContent = status.label;
+		el.className = "value activity-status activity-" + status.level.toLowerCase();
+	};
+
+	/**
+	 * 휴식(장시간 정지)/이상행동 의심 알림 배너를 갱신한다. 다음 알림이 오거나(레벨 무관하게
+	 * 덮어씀) 카드가 제거될 때까지 화면에 남아있다 - 별도의 확인/닫기 UI는 아직 없다.
+	 */
+	SubjectCard.prototype.onAlert = function (alert) {
+		var el = this.element.querySelector(".activity-alert");
+		if (!el) {
+			return;
+		}
+		el.textContent = alert.message;
+		el.className = "activity-alert activity-alert-" + alert.type.toLowerCase();
+		el.style.display = "";
 	};
 
 	SubjectCard.prototype.onLocation = function () {
@@ -380,7 +409,7 @@
 		_subscribeSubjectTopics: function (subject) {
 			var self = this;
 			var id = subject.id;
-			return [
+			var subscriptions = [
 				this.stompClient.subscribe("/topic/subjects/" + id + "/location", function (frame) {
 					var msg = JSON.parse(frame.body);
 					self.cards[id].onLocation();
@@ -402,6 +431,19 @@
 					self.cards[id].onVelocity(msg.speed);
 				})
 			];
+			// 활동 분석(정지/보행/활발한 움직임, 휴식/이상행동 경고)은 서버가 동물(ANIMAL) 대상에만
+			// 발행하므로, 사람 대상은 애초에 구독하지 않는다 (해당 카드에는 표시할 엘리먼트도 없음).
+			if (subject.type === "ANIMAL") {
+				subscriptions.push(
+					this.stompClient.subscribe("/topic/subjects/" + id + "/activity", function (frame) {
+						self.cards[id].onActivity(JSON.parse(frame.body));
+					}),
+					this.stompClient.subscribe("/topic/subjects/" + id + "/alerts", function (frame) {
+						self.cards[id].onAlert(JSON.parse(frame.body));
+					})
+				);
+			}
+			return subscriptions;
 		},
 
 		_checkStale: function () {

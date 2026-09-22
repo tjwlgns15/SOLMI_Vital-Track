@@ -20,6 +20,7 @@
 	--color-primary-soft: rgba(56, 189, 248, 0.14);
 	--color-danger: #f87171;
 	--color-success: #4ade80;
+	--color-warning: #fbbf24;
 
 	--radius-sm: 6px;
 	--radius: 10px;
@@ -576,6 +577,42 @@ tbody tr:last-child td {
 	font-weight: 600;
 	font-size: 16px;
 	margin-top: 2px;
+}
+
+/* 동물(ANIMAL) 대상 카드에만 표시되는 활동 수준 배지 - 정지/보행/활발한 움직임 */
+.activity-status.activity-rest {
+	color: var(--color-text-muted);
+}
+
+.activity-status.activity-walking {
+	color: var(--color-success);
+}
+
+.activity-status.activity-active {
+	color: var(--color-warning);
+}
+
+/* 휴식(장시간 정지)/이상행동 의심 알림 배너. 다음 알림이 오거나 카드가 제거될 때까지 유지된다. */
+.activity-alert {
+	margin-bottom: 12px;
+	padding: 8px 12px;
+	border-radius: var(--radius-sm);
+	font-size: 12px;
+	line-height: 1.5;
+	border: 1px solid transparent;
+}
+
+.activity-alert-rest {
+	background: rgba(251, 191, 36, 0.12);
+	border-color: rgba(251, 191, 36, 0.3);
+	color: var(--color-warning);
+}
+
+.activity-alert-abnormal {
+	background: rgba(248, 113, 113, 0.12);
+	border-color: rgba(248, 113, 113, 0.3);
+	color: var(--color-danger);
+	font-weight: 600;
 }
 
 /* ECG/가속도 캔버스를 감싸는 계측기 느낌의 그리드 배경 (오실로스코프 톤) */

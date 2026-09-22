@@ -1,5 +1,6 @@
 package com.solmi.vitaltrack.measurement;
 
+import com.solmi.vitaltrack.measurement.activity.ActivityMonitorService;
 import com.solmi.vitaltrack.member.Member;
 import com.solmi.vitaltrack.member.MemberRepository;
 import com.solmi.vitaltrack.subject.Subject;
@@ -38,6 +39,7 @@ public class MeasurementSessionService {
 	private final SubjectService subjectService;
 	private final MemberRepository memberRepository;
 	private final SessionActivityTracker activityTracker;
+	private final ActivityMonitorService activityMonitorService;
 	private final ApplicationEventPublisher eventPublisher;
 
 	@Transactional
@@ -71,6 +73,7 @@ public class MeasurementSessionService {
 		}
 		session.end();
 		activityTracker.forget(sessionId);
+		activityMonitorService.forgetSession(sessionId);
 		eventPublisher.publishEvent(new MeasurementSessionEndedEvent(memberId, session.getSubjectId()));
 		return SessionResponse.from(session);
 	}
@@ -117,6 +120,7 @@ public class MeasurementSessionService {
 		staleSessions.forEach(session -> {
 			session.endByTimeout();
 			activityTracker.forget(session.getId());
+			activityMonitorService.forgetSession(session.getId());
 			eventPublisher.publishEvent(
 					new MeasurementSessionEndedEvent(session.getSubject().getOwner().getId(), session.getSubjectId()));
 		});

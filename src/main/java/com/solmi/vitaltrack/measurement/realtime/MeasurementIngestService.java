@@ -3,6 +3,7 @@ package com.solmi.vitaltrack.measurement.realtime;
 import com.solmi.vitaltrack.measurement.MeasurementSession;
 import com.solmi.vitaltrack.measurement.MeasurementSessionService;
 import com.solmi.vitaltrack.measurement.SessionActivityTracker;
+import com.solmi.vitaltrack.measurement.activity.ActivityMonitorService;
 import com.solmi.vitaltrack.measurement.history.MeasurementHistoryService;
 import com.solmi.vitaltrack.subject.Subject;
 import com.solmi.vitaltrack.subject.SubjectRepository;
@@ -28,6 +29,7 @@ public class MeasurementIngestService {
 	private final RealtimeBroadcastService broadcastService;
 	private final MeasurementHistoryService historyService;
 	private final SessionActivityTracker activityTracker;
+	private final ActivityMonitorService activityMonitorService;
 
 	// 모든 메서드가 이력 저장(쓰기)으로 이어질 수 있으므로 클래스 레벨 readOnly 트랜잭션을 두지 않고
 	// 메서드마다 쓰기 가능한 트랜잭션을 명시한다 (readOnly 트랜잭션 안에서 INSERT가 실행되는 것을 방지).
@@ -52,6 +54,7 @@ public class MeasurementIngestService {
 		resolveActiveSession(message.subjectId(), memberId).ifPresent(session -> {
 			broadcastService.broadcastAcceleration(message.subjectId(), message);
 			historyService.recordAcceleration(session, message);
+			activityMonitorService.analyze(session, message);
 		});
 	}
 

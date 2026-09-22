@@ -27,9 +27,22 @@
 					<label for="subject-select">측정 대상</label>
 					<select id="subject-select"></select>
 				</div>
+				<div class="form-group" style="flex:1; margin-bottom:0;">
+					<label for="accel-mode-select">가속도 시뮬레이션 모드</label>
+					<select id="accel-mode-select">
+						<option value="WALK">기본 (보행)</option>
+						<option value="REST">정지 상태</option>
+						<option value="ABNORMAL">이상행동 (뒤척임)</option>
+					</select>
+				</div>
 				<button id="start-btn" class="btn">측정 시작</button>
 				<button id="stop-btn" class="btn btn-danger" disabled>측정 종료</button>
 			</div>
+			<p class="text-muted text-sm" style="margin-top:8px;">
+				가속도 시뮬레이션 모드는 측정 중에도 바로 바꿀 수 있습니다. "정지 상태"는 몇 분간 유지하면
+				대시보드에 휴식 알림이, "이상행동"은 2초 간격으로 정지↔격한 움직임을 반복해 짧은 시간 안에
+				이상행동 의심 알림이 뜨는지 확인할 수 있습니다.
+			</p>
 			<div class="simulator-log" id="log"></div>
 		</div>
 	</div>
