@@ -729,3 +729,132 @@ tbody tr:last-child td {
 	font-size: 13px;
 	white-space: nowrap;
 }
+
+/* ---------- 일일 활동량 리포트 화면 전용 소품 ---------- */
+
+.report-controls {
+	display: flex;
+	gap: 12px;
+	align-items: flex-end;
+	margin-bottom: 20px;
+}
+
+.report-summary-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-bottom: 16px;
+}
+
+.report-summary-header h2 {
+	margin: 0;
+}
+
+.report-session-count {
+	color: var(--color-text-muted);
+	font-size: 13px;
+}
+
+/* 정지/보행/활발한 움직임 비율을 한 줄짜리 막대로 표시. 색상은 대시보드의
+   .activity-status/.activity-alert 와 동일한 기준을 그대로 쓴다 (정지=muted, 보행=success, 활발=warning). */
+.activity-bar {
+	display: flex;
+	width: 100%;
+	height: 18px;
+	border-radius: 999px;
+	overflow: hidden;
+	background: var(--color-surface-alt);
+	margin-bottom: 16px;
+}
+
+.activity-bar-segment {
+	height: 100%;
+	transition: width var(--transition);
+}
+
+.activity-bar-rest {
+	background: var(--color-text-faint);
+}
+
+.activity-bar-walking {
+	background: var(--color-success);
+}
+
+.activity-bar-active {
+	background: var(--color-warning);
+}
+
+.report-legend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 20px;
+	margin-bottom: 24px;
+	font-size: 13px;
+	color: var(--color-text-muted);
+}
+
+.report-legend .legend-item {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.report-legend .legend-dot {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	flex-shrink: 0;
+}
+
+.report-legend .legend-dot.rest {
+	background: var(--color-text-faint);
+}
+
+.report-legend .legend-dot.walking {
+	background: var(--color-success);
+}
+
+.report-legend .legend-dot.active {
+	background: var(--color-warning);
+}
+
+.report-legend .legend-value {
+	color: var(--color-text);
+	font-weight: 600;
+}
+
+.report-stats {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+	gap: 12px;
+}
+
+.report-stat {
+	background: var(--color-surface-alt);
+	border: 1px solid var(--color-border-soft);
+	border-radius: var(--radius);
+	padding: 14px 16px;
+	text-align: center;
+}
+
+.report-stat .report-stat-value {
+	font-size: 22px;
+	font-weight: 700;
+	color: var(--color-text);
+}
+
+.report-stat .report-stat-value.warning {
+	color: var(--color-warning);
+}
+
+.report-stat .report-stat-value.danger {
+	color: var(--color-danger);
+}
+
+.report-stat .report-stat-label {
+	margin-top: 4px;
+	font-size: 12px;
+	color: var(--color-text-muted);
+}

@@ -39,6 +39,10 @@ public class ActivityStateTracker {
  */
 class ActivityHistory {
 
+	// package-private로 남겨두는 이유: DailyActivityReportService가 같은 패키지에서
+	// 이 클래스를 그대로 재사용해, 저장된 과거 가속도 기록을 실시간과 동일한 규칙으로
+	// "재생"하며 일일 활동량 리포트를 계산한다 (판정 로직을 두 곳에 중복시키지 않기 위함).
+
 	private static final Duration TRANSITION_WINDOW = Duration.ofMinutes(10);
 	private static final Duration SUSTAINED_REST_THRESHOLD = Duration.ofMinutes(3);
 	private static final int ABNORMAL_TRANSITION_THRESHOLD = 4;
