@@ -30,9 +30,9 @@
 	//   가속도 X/Y: 정확히 -0.3~0.3 (보행 흔들림) -> -1.5~1.5
 	//   가속도 Z: 9.6~10.0 (중력 9.8 근방) -> 8.5~11.1
 	var ECG_MIN = -1.0, ECG_MAX = 2.0;
-	var ACCEL_X_MIN = -1.5, ACCEL_X_MAX = 1.5;
-	var ACCEL_Y_MIN = -1.5, ACCEL_Y_MAX = 1.5;
-	var ACCEL_Z_MIN = 8.5, ACCEL_Z_MAX = 11.1;
+	var ACCEL_X_MIN = -2, ACCEL_X_MAX = 2;
+	var ACCEL_Y_MIN = -2, ACCEL_Y_MAX = 2;
+	var ACCEL_Z_MIN = 2, ACCEL_Z_MAX = 2;
 
 	/** 지도 렌더링만 담당 */
 	var MapView = {
@@ -243,7 +243,7 @@
 	SubjectCard.prototype.onVelocity = function (speed) {
 		this.markLive();
 		this.lastVelocity = speed;
-		this.element.querySelector(".velocity-value").textContent = speed.toFixed(2) + " m/s";
+		this.element.querySelector(".velocity-value").textContent = speed.toFixed(2) + " km/h";
 	};
 
 	/** 동물 대상 카드에만 있는 활동 수준 배지를 갱신한다 (사람 카드는 해당 엘리먼트가 없어 아무 일도 안 함). */

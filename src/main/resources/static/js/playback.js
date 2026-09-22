@@ -20,9 +20,12 @@
 
 	// y축 고정 범위도 대시보드와 동일하게 유지한다 (auto-scale 대신 채널별 고정값을 사용).
 	var ECG_MIN = -1.0, ECG_MAX = 2.0;
-	var ACCEL_X_MIN = -1.5, ACCEL_X_MAX = 1.5;
-	var ACCEL_Y_MIN = -1.5, ACCEL_Y_MAX = 1.5;
-	var ACCEL_Z_MIN = 8.5, ACCEL_Z_MAX = 11.1;
+	// var ACCEL_X_MIN = -1.5, ACCEL_X_MAX = 1.5;
+	// var ACCEL_Y_MIN = -1.5, ACCEL_Y_MAX = 1.5;
+	// var ACCEL_Z_MIN = 8.5, ACCEL_Z_MAX = 11.1;
+	var ACCEL_X_MIN = -2, ACCEL_X_MAX = 2;
+	var ACCEL_Y_MIN = -2, ACCEL_Y_MAX = 2;
+	var ACCEL_Z_MIN = 2, ACCEL_Z_MAX = 2;
 	var TICK_MS = 100;
 
 	function formatTime(ms) {
@@ -215,7 +218,7 @@
 			drawLineChart(this.accelCanvasZ, state.accelBufferZ, state.accelBufferSize, ACCEL_AXIS_COLORS.z, ACCEL_Z_MIN, ACCEL_Z_MAX);
 
 			if (state.velocity) {
-				document.querySelector(".velocity-value").textContent = state.velocity.speed.toFixed(2) + " m/s";
+				document.querySelector(".velocity-value").textContent = state.velocity.speed.toFixed(2) + " km/h";
 			}
 
 			document.querySelector(".ecg-status").textContent = state.ecgBuffer.length > 0 ? "재생 중" : "-";
