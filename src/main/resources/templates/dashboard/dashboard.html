@@ -13,7 +13,7 @@
 		<div class="map-panel">
 			<div id="map"></div>
 		</div>
-		<div class="signal-panel" id="signal-panel">
+		<div class="signal-panel dashboard-panel" id="signal-panel">
 			<p th:if="${#lists.isEmpty(subjects) and !hasRegisteredSubjects}"
 			   id="empty-state-no-subjects" class="empty-state">
 				등록된 측정 대상이 없습니다. <a th:href="@{/subjects}">측정 대상을 먼저 등록해주세요.</a>

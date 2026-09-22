@@ -43,6 +43,9 @@
 
 html {
 	color-scheme: dark;
+	/* 뷰포트 높이를 100%로 고정해, body가 "내비게이션 + 본문"을 flex-column으로 정확히
+	   나눠 가질 수 있는 기준선을 만든다 (아래 body 참고). */
+	height: 100%;
 }
 
 body {
@@ -58,6 +61,14 @@ body {
 	color: var(--color-text);
 	-webkit-font-smoothing: antialiased;
 	text-rendering: optimizeLegibility;
+	/* html이 height:100%이므로 body도 정확히 뷰포트 높이를 갖는다. 내비게이션(자연스러운 높이) +
+	   본문(.page/.page-wide)을 세로로 쌓되, .page-wide처럼 flex:1을 준 요소만 "내비게이션을 뺀
+	   나머지 공간"을 정확히 채운다 - calc(100vh - 70px) 같은 매직넘버 없이 브라우저가 직접 계산한다.
+	   일반 .page 컨텐츠는 flex-grow가 없어 기존과 동일하게 내용 높이만큼만 차지하고, 내용이 길면
+	   화면 전체가 자연스럽게 스크롤된다(기존 동작 그대로 유지). */
+	min-height: 100%;
+	display: flex;
+	flex-direction: column;
 }
 
 ::selection {
@@ -198,9 +209,22 @@ a:hover {
 }
 
 .page-wide {
-	max-width: 1400px;
+	/* 좌우 여백을 최소화하고 지도/신호 패널이 화면을 최대한 넓게 쓰도록 폭 제한을 사실상 없앤다. */
+	max-width: 1900px;
+	width: 100%;
 	margin: 0 auto;
-	padding: 24px;
+	padding: 12px 16px;
+	/* body 쪽 flex-column에서 "내비게이션을 뺀 나머지 전체"를 정확히 차지한다(매직넘버 없음).
+	   내부에서도 flex-column으로 .split-layout에게 padding을 뺀 나머지 높이를 그대로 넘긴다 -
+	   split-layout이 height:100% 같은 걸 쓸 필요 없이 flex:1만으로 padding까지 자동 반영된다. */
+	/* flex-basis를 auto가 아닌 0으로 줘서, 내용(카드 안 캔버스 크기 등) 기준 크기를 먼저 가늠하는
+	   1차 계산 단계에서 이 영역의 내용을 아예 보지 않게 한다 - 그래야 그 내용 기준 크기가 body까지
+	   새어 올라가 body 자체를 부풀리는 일이 없다. body는 정확히 뷰포트 높이에서 멈추고, 이 영역은
+	   grow로 남는 공간만 확정적으로 받는다. */
+	flex: 1 1 0;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
 }
 
 .page > h1 {
@@ -476,15 +500,32 @@ tbody tr:last-child td {
 
 /* ---------- 대시보드/재생: 좌측 지도 / 우측 신호 패널 반반 레이아웃 ---------- */
 .split-layout {
-	display: grid;
-	grid-template-columns: 1.1fr 0.9fr;
-	gap: 16px;
-	height: calc(100vh - 90px);
+	/* grid-template-columns 대신 flex row를 쓴다: CSS Grid는 "높이가 정해지지 않은(auto) 행" +
+	   "그 행에 속한 자식이 퍼센트로 자기 자신 높이를 다시 나누는" 조합에서, 자식(.signal-panel.dashboard-panel)의
+	   높이가 실제로는 카드 내용(ECG/가속도 캔버스 크기 등)을 먼저 측정해 순환적으로 다시 정해지는
+	   경우가 있어 - 인원수가 늘수록 카드가 고정 1/3이 아니라 내용만큼 부풀고, 그 여파로 이 영역과
+	   지도까지 함께 커지면서 스크롤바가 생기는 버그가 있었다. flex row의 교차축(cross-axis) stretch는
+	   이런 2단계 측정 없이 부모(.split-layout)의 이미 확정된 높이를 자식에게 곧바로 내려주므로,
+	   .signal-panel.dashboard-panel 내부의 퍼센트 기반 1/3 고정 높이 계산이 항상 정확히 동작한다. */
+	display: flex;
+	flex-direction: row;
+	/* 신호 패널(좌) : 지도(우) = 0.9 : 1.1 비율. 두 패널의 DOM 순서는 그대로 두고
+	   order로 시각적 위치만 좌우 교체한다 (JS는 #map/#signal-panel을 id로 참조하므로 영향 없음). */
+	gap: 8px;
+	/* 높이를 calc(100vh - 70px)처럼 고정값으로 추측하지 않는다 - .page-wide가 flex-column으로
+	   넘겨주는 "패딩까지 이미 반영된 나머지 공간"을 flex:1로 그대로 채운다. 인원수가 0명이어도
+	   이 영역 자체는 남는 공간을 정확히 채울 뿐 넘치지 않으므로 빈 상태에서 스크롤바가 생기지 않는다. */
+	/* 같은 이유로 flex-basis를 0으로 준다 (위 .page-wide 주석 참고). */
+	flex: 1 1 0;
+	min-height: 0;
 }
 
 .map-panel {
+	order: 2;
+	flex: 1.1 1 0;
+	min-width: 0;
 	position: relative;
-	border-radius: var(--radius-lg);
+	border-radius: var(--radius);
 	overflow: hidden;
 	border: 1px solid var(--color-border-soft);
 	box-shadow: var(--shadow-sm);
@@ -495,44 +536,95 @@ tbody tr:last-child td {
 	height: 100%;
 }
 
+/* 재생(playback) 화면 - 헤더 카드/신호 카드/컨트롤 카드가 세로로 쌓이는 목록. */
 .signal-panel {
+	order: 1;
+	flex: 0.9 1 0;
+	min-width: 0;
+	min-height: 0;
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
+	gap: 8px;
 	overflow-y: auto;
 	padding-right: 2px;
 }
 
+/* 대시보드 - 카드 한 장의 높이는 "현재 측정 중인 인원수로 나눈 값"이 아니라, 언제나
+   패널 전체 높이의 정확히 1/3로 고정한다(gap 두 칸만큼 뺀 나머지를 3등분).
+   grid-auto-rows에 고정 계산식을 주면 행 개수와 무관하게 매 행이 항상 이 고정 높이를 갖는다:
+   - 1명일 때: 카드 1장이 1/3 높이만 차지하고 나머지 2/3은 비워둔다(카드가 늘어나 채우지 않음).
+   - 2명일 때: 카드 2장이 각각 1/3씩, 마지막 1/3은 비워둔다.
+   - 3명일 때: 정확히 3장이 1/3씩 꽉 채워 스크롤 없이 한눈에 들어온다.
+   - 4명 이상: 행이 고정 높이를 유지한 채 패널 밖으로 넘치고, 그 초과분만 스크롤된다. */
+.signal-panel.dashboard-panel {
+	display: grid;
+	grid-auto-rows: calc((100% - 8px) / 3);
+	gap: 4px;
+	align-content: start;
+	min-height: 0;
+}
+
+.dashboard-panel .subject-card {
+	height: 100%;
+	min-height: 0;
+}
+
+/* 참고한 모니터 UI처럼 그라데이션/그림자/둥근 모서리를 걷어내고, 얇은 테두리로만 구분되는
+   계측기 패널 느낌의 평평한(flat) 카드로 바꾼다. 세로 공간은 flex로 나눠(헤더/활력징후는
+   내용만큼, ECG/가속도 차트는 남는 공간을 전부) 카드가 커져도(대상 1~3명일 때) 차트가
+   실제로 넓게 그려지도록 한다. */
 .subject-card {
-	background: linear-gradient(180deg, var(--color-surface), var(--color-bg-elevated));
+	display: flex;
+	flex-direction: column;
+	position: relative;
+	background: var(--color-bg-elevated);
 	border: 1px solid var(--color-border-soft);
-	border-radius: var(--radius-lg);
-	padding: 16px;
+	border-left: 3px solid var(--color-border);
+	border-radius: var(--radius-sm);
+	padding: 8px 10px;
 	cursor: pointer;
-	box-shadow: var(--shadow-sm);
-	transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+	overflow: hidden;
+	transition: border-color var(--transition-fast), background-color var(--transition-fast);
 }
 
 .subject-card:hover {
 	border-color: #475569;
-	transform: translateY(-1px);
+	border-left-color: var(--color-primary-dark);
+	background: var(--color-surface-hover);
 }
 
 .subject-card.selected {
 	border-color: var(--color-primary);
-	box-shadow: var(--shadow-focus);
+	border-left-color: var(--color-primary);
+	background: var(--color-surface-hover);
 }
 
+/* 계측 장비 느낌의 타이틀바: 상태 dot·이름·종류 뱃지를 테두리로 한 번 감싸서
+   신호 영역과 시각적으로 분리한다 (참고한 모니터 UI의 환자정보 박스 스타일). */
 .subject-card-header {
 	display: flex;
+	flex-wrap: wrap;
 	justify-content: space-between;
 	align-items: center;
-	margin-bottom: 12px;
+	flex-shrink: 0;
+	gap: 6px;
+	padding: 5px 9px;
+	margin-bottom: 6px;
+	border: 1px solid var(--color-border-soft);
+	border-radius: var(--radius-sm);
+	background: rgba(148, 163, 184, 0.04);
+}
+
+.subject-identity {
+	display: flex;
+	align-items: center;
+	flex-shrink: 0;
 }
 
 .subject-card-header .name {
 	font-weight: 600;
-	font-size: 15px;
+	font-size: 14px;
+	letter-spacing: 0.01em;
 }
 
 .status-dot {
@@ -563,20 +655,38 @@ tbody tr:last-child td {
 	}
 }
 
+/* 계측 패널 느낌의 칩 형태 - 참고한 모니터 UI의 vital-item 박스 스타일을 그대로 따른다.
+   subject-card-header 안에 중첩되어 이름/뱃지(subject-identity) 옆 남는 공간을 채운다 -
+   더 이상 자기만의 줄/박스가 아니므로 아래쪽 여백은 없앤다. */
 .vitals-row {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 12px 20px;
-	margin-bottom: 12px;
-	font-size: 12px;
+	justify-content: flex-end;
+	flex: 1 1 auto;
+	gap: 6px;
+	font-size: 10.5px;
 	color: var(--color-text-muted);
+}
+
+.vitals-row > div {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 1px;
+	flex: 1;
+	min-width: 44px;
+	padding: 3px 6px;
+	border: 1px solid var(--color-border-soft);
+	border-radius: var(--radius-sm);
+	background: rgba(148, 163, 184, 0.03);
 }
 
 .vitals-row .value {
 	color: var(--color-text);
-	font-weight: 600;
-	font-size: 16px;
-	margin-top: 2px;
+	font-weight: 700;
+	font-size: 13px;
+	margin-top: 1px;
+	white-space: nowrap;
 }
 
 /* 동물(ANIMAL) 대상 카드에만 표시되는 활동 수준 배지 - 정지/보행/활발한 움직임 */
@@ -592,69 +702,90 @@ tbody tr:last-child td {
 	color: var(--color-warning);
 }
 
-/* 휴식(장시간 정지)/이상행동 의심 알림 배너. 다음 알림이 오거나 카드가 제거될 때까지 유지된다. */
+/* 휴식(장시간 정지)/이상행동 의심 알림. 다음 알림이 오거나 직접 클릭해서 닫기 전까지 유지된다
+   (닫기는 dashboard.js가 클릭 이벤트로 처리). 카드 높이를 차지하지 않도록 우측 상단에 절대
+   위치로 떠 있는 toast 형태다 - 그만큼 차트에 더 많은 세로 공간을 줄 수 있다. */
 .activity-alert {
-	margin-bottom: 12px;
-	padding: 8px 12px;
+	position: absolute;
+	top: 6px;
+	right: 6px;
+	max-width: calc(100% - 12px);
+	z-index: 5;
+	padding: 6px 10px;
 	border-radius: var(--radius-sm);
-	font-size: 12px;
-	line-height: 1.5;
+	font-size: 11.5px;
+	line-height: 1.4;
 	border: 1px solid transparent;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+	cursor: pointer;
+	transition: opacity var(--transition-fast);
+}
+
+.activity-alert:hover {
+	opacity: 0.8;
 }
 
 .activity-alert-rest {
-	background: rgba(251, 191, 36, 0.12);
-	border-color: rgba(251, 191, 36, 0.3);
+	background: rgba(30, 24, 8, 0.92);
+	border-color: rgba(251, 191, 36, 0.4);
 	color: var(--color-warning);
 }
 
 .activity-alert-abnormal {
-	background: rgba(248, 113, 113, 0.12);
-	border-color: rgba(248, 113, 113, 0.3);
+	background: rgba(35, 15, 15, 0.92);
+	border-color: rgba(248, 113, 113, 0.4);
 	color: var(--color-danger);
 	font-weight: 600;
 }
 
-/* ECG/가속도 캔버스를 감싸는 계측기 느낌의 그리드 배경 (오실로스코프 톤) */
+/* ECG/가속도 캔버스를 감싸는 계측기 느낌의 그리드 배경 (참고한 모니터 UI처럼 어둡고
+   중립적인 톤 - 그리드 색도 특정 신호 색상에 치우치지 않게 회색조로 통일한다). 모서리도
+   각지게(radius 없음) 해서 계측 장비의 화면 같은 인상을 준다. */
 .ecg-canvas,
 .accel-canvas {
 	width: 100%;
-	background-color: #0a1120;
+	background-color: #060b16;
 	background-image:
-		linear-gradient(rgba(56, 189, 248, 0.07) 1px, transparent 1px),
-		linear-gradient(90deg, rgba(56, 189, 248, 0.07) 1px, transparent 1px);
+		linear-gradient(rgba(148, 163, 184, 0.09) 1px, transparent 1px),
+		linear-gradient(90deg, rgba(148, 163, 184, 0.09) 1px, transparent 1px);
 	background-size: 20px 20px;
 	border: 1px solid var(--color-border-soft);
-	border-radius: var(--radius-sm);
+	border-radius: 0;
 	display: block;
 }
 
-.ecg-canvas {
-	height: 90px;
+/* 가속도 x/y/z를 하나의 차트에 겹쳐 그리되, 세 선을 살짝 어긋나게(offset) 그려 구분한다.
+   축척은 셋이 공유(같은 min/max)하므로 색상 구분과 별개로 상대적인 흔들림 크기도 그대로 비교할 수 있다.
+   (실제 그리기는 js의 drawAccelChart가 담당 - X/Y/Z 세로 위치만 살짝 어긋난다) */
+.accel-panel {
+	margin-top: 6px;
+	/* X/Y/Z 범례를 캔버스 좌측 하단 안쪽에 겹쳐 띄우기 위한 기준 컨테이너. */
+	position: relative;
 }
 
-/* 가속도 x/y/z 각각을 별도 차트로 보여주는 영역 (dataviz 카테고리컬 팔레트 slot 1~3: blue/orange/aqua) */
-.accel-charts {
+/* 더 이상 캔버스 위에 자기 줄을 차지하지 않고, 캔버스 좌측 하단 안쪽에 겹쳐(overlay) 떠 있다 -
+   그만큼 accel-canvas가 세로로 더 커진다. 어두운 반투명 배경을 깔아 캔버스의 격자 배경 위에서도
+   잘 보이게 한다. */
+.accel-legend {
+	position: absolute;
+	left: 6px;
+	bottom: 6px;
+	z-index: 2;
 	display: flex;
-	flex-direction: column;
-	gap: 8px;
-	margin-top: 12px;
-}
-
-.accel-chart-row {
-	display: flex;
-	align-items: center;
-	gap: 10px;
+	gap: 4px;
+	padding: 2px 3px;
+	border-radius: 999px;
+	background: rgba(6, 11, 22, 0.6);
 }
 
 .accel-axis-label {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 20px;
-	height: 20px;
+	width: 18px;
+	height: 18px;
 	flex-shrink: 0;
-	font-size: 11px;
+	font-size: 10px;
 	font-weight: 700;
 	border-radius: 50%;
 }
@@ -674,15 +805,40 @@ tbody tr:last-child td {
 	background: rgba(25, 158, 112, 0.15);
 }
 
-.accel-canvas {
+/* 대시보드(격자 모드) - 카드 높이는 항상 패널의 1/3로 고정이므로, ECG/가속도 차트도
+   인원수와 무관하게 그 고정된 카드 높이 안에서 남는 세로 공간을 헤더/활력징후를 뺀 만큼
+   flex로 나눠 채운다. */
+.dashboard-panel .ecg-canvas {
 	flex: 1;
-	/* 캔버스는 대체 요소라 flex 컨테이너 안에서 기본 min-width:auto가 원래 너비(400px)로
-	   잡혀 카드 폭을 넘칠 수 있다 (실사용 화면에서 실제로 확인된 문제) - 0으로 풀어 자유롭게 줄어들게 한다. */
-	min-width: 0;
-	height: 48px;
+	min-height: 0;
+}
+
+.dashboard-panel .accel-panel {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.dashboard-panel .accel-panel .accel-canvas {
+	flex: 1;
+	min-height: 0;
+}
+
+/* 재생(playback) 화면 - 카드가 하나뿐이라 격자로 나눌 필요가 없으므로 고정 높이를 쓴다.
+   여백이 넉넉해진 만큼(페이지 폭 확장) 대시보드보다 조금 더 크게 보여준다. */
+#ecg-canvas {
+	height: 140px;
+}
+
+#accel-canvas {
+	height: 110px;
 }
 
 .empty-state {
+	display: flex;
+	align-items: center;
+	justify-content: center;
 	color: var(--color-text-muted);
 	text-align: center;
 	padding: 48px 16px;

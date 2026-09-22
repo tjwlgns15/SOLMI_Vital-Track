@@ -19,13 +19,17 @@
 	var ACCEL_AXIS_COLORS = {x: "#3987e5", y: "#d95926", z: "#199e70"};
 
 	// y축 고정 범위도 대시보드와 동일하게 유지한다 (auto-scale 대신 채널별 고정값을 사용).
+	// 참고한 모니터 UI처럼 ECG 파형은 임상 모니터에서 흔히 쓰는 초록색으로 그린다.
+	var ECG_COLOR = "#22c55e";
 	var ECG_MIN = -1.0, ECG_MAX = 2.0;
-	// var ACCEL_X_MIN = -1.5, ACCEL_X_MAX = 1.5;
-	// var ACCEL_Y_MIN = -1.5, ACCEL_Y_MAX = 1.5;
-	// var ACCEL_Z_MIN = 8.5, ACCEL_Z_MAX = 11.1;
-	var ACCEL_X_MIN = -2, ACCEL_X_MAX = 2;
-	var ACCEL_Y_MIN = -2, ACCEL_Y_MAX = 2;
-	var ACCEL_Z_MIN = 2, ACCEL_Z_MAX = 2;
+	// x/y/z를 하나의 차트에 겹쳐 그리므로 셋이 같은 축척(min/max)을 공유해야 흔들림 크기를 그대로
+	// 비교할 수 있다. z축만 중력(약 9.8) 성분이 실려 있어 그대로는 축이 다르므로, 그리기 직전에
+	// ACCEL_Z_BASELINE만큼 빼서 x/y와 같은 "0 근방 흔들림" 값으로 맞춘 뒤 같은 범위로 정규화한다
+	// (대시보드 dashboard.js와 동일한 정책).
+	var ACCEL_MIN = -2, ACCEL_MAX = 2;
+	var ACCEL_Z_BASELINE = 9.8;
+	// 세 선이 완전히 겹치지 않도록 세로로 살짝 어긋나게(offset) 그린다 (색상 구분은 그대로 유지).
+	var ACCEL_LANE_OFFSET_PX = 13;
 	var TICK_MS = 100;
 
 	function formatTime(ms) {
@@ -58,6 +62,46 @@
 			var x = (offset + i) * step;
 			var normalized = (buffer[i] - min) / range;
 			var y = h - normalized * (h - 10) - 5;
+			if (i === 0) {
+				ctx.moveTo(x, y);
+			} else {
+				ctx.lineTo(x, y);
+			}
+		}
+		ctx.stroke();
+	}
+
+	/**
+	 * 가속도 x/y/z를 한 캔버스에 겹쳐 그린다. 세 축이 같은 min/max(ACCEL_MIN~ACCEL_MAX)를
+	 * 공유해서 흔들림 크기를 그대로 비교할 수 있게 하되, 완전히 겹치지 않도록 축마다 픽셀
+	 * 단위로 살짝 어긋나게(offset) 그린다. z축은 중력 성분(ACCEL_Z_BASELINE)을 먼저 빼서
+	 * x/y와 같은 "0 근방 흔들림" 값으로 맞춘 뒤 그린다 (대시보드 dashboard.js와 동일한 로직).
+	 */
+	function drawAccelChart(canvas, bufferX, bufferY, bufferZ, bufferSize) {
+		var ctx = canvas.getContext("2d");
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		drawAccelLine(ctx, canvas, bufferX, bufferSize, ACCEL_AXIS_COLORS.x, -ACCEL_LANE_OFFSET_PX, 0);
+		drawAccelLine(ctx, canvas, bufferY, bufferSize, ACCEL_AXIS_COLORS.y, 0, 0);
+		drawAccelLine(ctx, canvas, bufferZ, bufferSize, ACCEL_AXIS_COLORS.z, ACCEL_LANE_OFFSET_PX, ACCEL_Z_BASELINE);
+	}
+
+	function drawAccelLine(ctx, canvas, buffer, bufferSize, color, pixelOffset, valueBaseline) {
+		if (buffer.length < 2) {
+			return;
+		}
+		var w = canvas.width;
+		var h = canvas.height;
+		var range = (ACCEL_MAX - ACCEL_MIN) || 1;
+		var step = w / (bufferSize - 1);
+		var offset = bufferSize - buffer.length;
+
+		ctx.strokeStyle = color;
+		ctx.lineWidth = 1.5;
+		ctx.beginPath();
+		for (var i = 0; i < buffer.length; i++) {
+			var x = (offset + i) * step;
+			var normalized = ((buffer[i] - valueBaseline) - ACCEL_MIN) / range;
+			var y = h - normalized * (h - 10) - 5 + pixelOffset;
 			if (i === 0) {
 				ctx.moveTo(x, y);
 			} else {
@@ -186,9 +230,7 @@
 			}).addTo(this.map);
 			this.subjectName = subjectName;
 			this.ecgCanvas = document.getElementById("ecg-canvas");
-			this.accelCanvasX = document.getElementById("accel-canvas-x");
-			this.accelCanvasY = document.getElementById("accel-canvas-y");
-			this.accelCanvasZ = document.getElementById("accel-canvas-z");
+			this.accelCanvas = document.getElementById("accel-canvas");
 		},
 
 		drawFullPath: function (locations) {
@@ -213,16 +255,14 @@
 				document.querySelector(".loc-status").textContent = "재생 중";
 			}
 
-			drawLineChart(this.accelCanvasX, state.accelBufferX, state.accelBufferSize, ACCEL_AXIS_COLORS.x, ACCEL_X_MIN, ACCEL_X_MAX);
-			drawLineChart(this.accelCanvasY, state.accelBufferY, state.accelBufferSize, ACCEL_AXIS_COLORS.y, ACCEL_Y_MIN, ACCEL_Y_MAX);
-			drawLineChart(this.accelCanvasZ, state.accelBufferZ, state.accelBufferSize, ACCEL_AXIS_COLORS.z, ACCEL_Z_MIN, ACCEL_Z_MAX);
+			drawAccelChart(this.accelCanvas, state.accelBufferX, state.accelBufferY, state.accelBufferZ, state.accelBufferSize);
 
 			if (state.velocity) {
 				document.querySelector(".velocity-value").textContent = state.velocity.speed.toFixed(2) + " km/h";
 			}
 
 			document.querySelector(".ecg-status").textContent = state.ecgBuffer.length > 0 ? "재생 중" : "-";
-			drawLineChart(this.ecgCanvas, state.ecgBuffer, state.ecgBufferSize, "#38bdf8", ECG_MIN, ECG_MAX);
+			drawLineChart(this.ecgCanvas, state.ecgBuffer, state.ecgBufferSize, ECG_COLOR, ECG_MIN, ECG_MAX);
 		}
 	};
 

@@ -29,10 +29,16 @@
 	//   ECG: 대략 -0.28~1.02 (R파 피크 ~1.0) -> -1.0~2.0
 	//   가속도 X/Y: 정확히 -0.3~0.3 (보행 흔들림) -> -1.5~1.5
 	//   가속도 Z: 9.6~10.0 (중력 9.8 근방) -> 8.5~11.1
+	// 참고한 모니터 UI처럼 ECG 파형은 임상 모니터에서 흔히 쓰는 초록색으로 그린다.
+	var ECG_COLOR = "#22c55e";
 	var ECG_MIN = -1.0, ECG_MAX = 2.0;
-	var ACCEL_X_MIN = -2, ACCEL_X_MAX = 2;
-	var ACCEL_Y_MIN = -2, ACCEL_Y_MAX = 2;
-	var ACCEL_Z_MIN = 2, ACCEL_Z_MAX = 2;
+	// x/y/z를 하나의 차트에 겹쳐 그리므로 셋이 같은 축척(min/max)을 공유해야 흔들림 크기를 그대로
+	// 비교할 수 있다. z축만 중력(약 9.8) 성분이 실려 있어 그대로는 축이 다르므로, 그리기 직전에
+	// ACCEL_Z_BASELINE만큼 빼서 x/y와 같은 "0 근방 흔들림" 값으로 맞춘 뒤 같은 범위로 정규화한다.
+	var ACCEL_MIN = -2, ACCEL_MAX = 2;
+	var ACCEL_Z_BASELINE = 9.8;
+	// 세 선이 완전히 겹치지 않도록 세로로 살짝 어긋나게(offset) 그린다 (색상 구분은 그대로 유지).
+	var ACCEL_LANE_OFFSET_PX = 13;
 
 	/** 지도 렌더링만 담당 */
 	var MapView = {
@@ -121,6 +127,46 @@
 		ctx.stroke();
 	}
 
+	/**
+	 * 가속도 x/y/z를 한 캔버스에 겹쳐 그린다. 세 축이 같은 min/max(ACCEL_MIN~ACCEL_MAX)를
+	 * 공유해서 흔들림 크기를 그대로 비교할 수 있게 하되, 완전히 겹치지 않도록 축마다 픽셀
+	 * 단위로 살짝 어긋나게(offset) 그린다. z축은 중력 성분(ACCEL_Z_BASELINE)을 먼저 빼서
+	 * x/y와 같은 "0 근방 흔들림" 값으로 맞춘 뒤 그린다.
+	 */
+	function drawAccelChart(canvas, bufferX, bufferY, bufferZ, bufferSize) {
+		var ctx = canvas.getContext("2d");
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		drawAccelLine(ctx, canvas, bufferX, bufferSize, ACCEL_AXIS_COLORS.x, -ACCEL_LANE_OFFSET_PX, 0);
+		drawAccelLine(ctx, canvas, bufferY, bufferSize, ACCEL_AXIS_COLORS.y, 0, 0);
+		drawAccelLine(ctx, canvas, bufferZ, bufferSize, ACCEL_AXIS_COLORS.z, ACCEL_LANE_OFFSET_PX, ACCEL_Z_BASELINE);
+	}
+
+	function drawAccelLine(ctx, canvas, buffer, bufferSize, color, pixelOffset, valueBaseline) {
+		if (buffer.length < 2) {
+			return;
+		}
+		var w = canvas.width;
+		var h = canvas.height;
+		var range = (ACCEL_MAX - ACCEL_MIN) || 1;
+		var step = w / (bufferSize - 1);
+		var offset = bufferSize - buffer.length;
+
+		ctx.strokeStyle = color;
+		ctx.lineWidth = 1.5;
+		ctx.beginPath();
+		for (var i = 0; i < buffer.length; i++) {
+			var x = (offset + i) * step;
+			var normalized = ((buffer[i] - valueBaseline) - ACCEL_MIN) / range;
+			var y = h - normalized * (h - 10) - 5 + pixelOffset;
+			if (i === 0) {
+				ctx.moveTo(x, y);
+			} else {
+				ctx.lineTo(x, y);
+			}
+		}
+		ctx.stroke();
+	}
+
 	function pluckX(sample) {
 		return sample.x;
 	}
@@ -144,9 +190,17 @@
 		this.lastMessageAt = 0;
 		this.element = this._render();
 		this.canvas = this.element.querySelector(".ecg-canvas");
-		this.accelCanvasX = this.element.querySelector(".accel-canvas-x");
-		this.accelCanvasY = this.element.querySelector(".accel-canvas-y");
-		this.accelCanvasZ = this.element.querySelector(".accel-canvas-z");
+		this.accelCanvas = this.element.querySelector(".accel-canvas");
+		// toast로 뜨는 휴식/이상행동 알림은 다음 알림이 올 때까지 계속 떠 있으므로, 클릭하면 직접
+		// 닫을 수 있게 한다. stopPropagation을 안 하면 카드 전체의 클릭(카드 선택/해제)까지 같이
+		// 발생해버리므로 막는다.
+		var alertEl = this.element.querySelector(".activity-alert");
+		if (alertEl) {
+			alertEl.addEventListener("click", function (event) {
+				event.stopPropagation();
+				alertEl.style.display = "none";
+			});
+		}
 	}
 
 	SubjectCard.prototype._render = function () {
@@ -158,30 +212,33 @@
 		card.className = "subject-card";
 		card.id = "subject-card-" + this.subject.id;
 		card.innerHTML =
+			// 카드 높이가 고정(패널의 1/3)이라 차트에 최대한 공간을 몰아주려고, 상태/이름/뱃지와
+			// ECG·속도·위치·활동 수치를 별도의 두 박스로 나누지 않고 subject-card-header 한 줄에
+			// 합친다 (이름 쪽은 줄지 않게 flex-shrink:0, 수치 칩들은 남는 공간에서 알아서 줄바꿈).
 			'<div class="subject-card-header">' +
-			'  <div><span class="status-dot offline"></span><span class="name"></span> ' +
+			'  <div class="subject-identity"><span class="status-dot offline"></span><span class="name"></span> ' +
 			'  <span class="badge ' + badgeClass + '"></span></div>' +
+			'  <div class="vitals-row">' +
+			'    <div>ECG <div class="value ecg-status">대기 중</div></div>' +
+			'    <div>속도 <div class="value velocity-value">-</div></div>' +
+			'    <div>위치 <div class="value loc-status">-</div></div>' +
+			(isAnimal ? '    <div>활동 <div class="value activity-status">-</div></div>' : '') +
+			'  </div>' +
 			'</div>' +
+			// 휴식/이상행동 알림은 더 이상 카드 높이를 차지하지 않는다 - 카드 우측 상단에 떠 있는
+			// toast로 표시된다 (subject-card가 position:relative라 이 안에서만 절대 위치로 뜬다).
 			(isAnimal ? '<div class="activity-alert" style="display:none;"></div>' : '') +
-			'<div class="vitals-row">' +
-			'  <div>ECG <div class="value ecg-status">대기 중</div></div>' +
-			'  <div>속도 <div class="value velocity-value">-</div></div>' +
-			'  <div>위치 <div class="value loc-status">-</div></div>' +
-			(isAnimal ? '  <div>활동 <div class="value activity-status">-</div></div>' : '') +
-			'</div>' +
-			'<canvas class="ecg-canvas" width="400" height="90"></canvas>' +
-			'<div class="accel-charts">' +
-			'  <div class="accel-chart-row">' +
+			// 캔버스 내부 해상도(width/height 속성)는 CSS가 카드 크기에 맞춰 늘려도(격자 모드에서
+			// 대상이 1~2명이면 카드가 꽤 커진다) 너무 흐려지지 않도록 실제 표시 크기보다 넉넉하게 잡는다.
+			'<canvas class="ecg-canvas" width="600" height="180"></canvas>' +
+			'<div class="accel-panel">' +
+			'  <canvas class="accel-canvas" width="600" height="140"></canvas>' +
+			// X/Y/Z 범례는 더 이상 캔버스 위 자기 줄을 차지하지 않고, 캔버스 좌측 하단 안쪽에
+			// 겹쳐서(overlay) 떠 있다 - 그만큼 캔버스가 세로로 더 커진다.
+			'  <div class="accel-legend">' +
 			'    <span class="accel-axis-label accel-axis-x">X</span>' +
-			'    <canvas class="accel-canvas accel-canvas-x" width="400" height="48"></canvas>' +
-			'  </div>' +
-			'  <div class="accel-chart-row">' +
 			'    <span class="accel-axis-label accel-axis-y">Y</span>' +
-			'    <canvas class="accel-canvas accel-canvas-y" width="400" height="48"></canvas>' +
-			'  </div>' +
-			'  <div class="accel-chart-row">' +
 			'    <span class="accel-axis-label accel-axis-z">Z</span>' +
-			'    <canvas class="accel-canvas accel-canvas-z" width="400" height="48"></canvas>' +
 			'  </div>' +
 			'</div>';
 		card.querySelector(".name").textContent = this.subject.name;
@@ -218,11 +275,12 @@
 		this.element.querySelector(".ecg-status").textContent = "수신 중";
 		var bufferSize = Math.round((samplingRateHz || ECG_DEFAULT_SAMPLING_HZ) * ECG_WINDOW_SECONDS);
 		this.ecgBuffer = appendAndTrim(this.ecgBuffer, samples, bufferSize);
-		drawLineChart(this.canvas, this.ecgBuffer, bufferSize, "#38bdf8", ECG_MIN, ECG_MAX);
+		drawLineChart(this.canvas, this.ecgBuffer, bufferSize, ECG_COLOR, ECG_MIN, ECG_MAX);
 	};
 
 	/**
-	 * 가속도는 크기(magnitude) 하나로 뭉치지 않고 x/y/z 축을 각각 별도 차트로 그린다.
+	 * 가속도는 크기(magnitude) 하나로 뭉치지 않고 x/y/z 축을 유지하되, 한 캔버스에 겹쳐 그린다
+	 * (drawAccelChart - 색상으로 구분하고 세 선을 살짝 어긋나게 그려 구분한다).
 	 * 버퍼 크기는 고정 상수가 아니라 이번에 들어온 samplingRateHz 기준으로 매번 계산한다
 	 * (ACCEL_WINDOW_SECONDS초 분량 = samplingRateHz * ACCEL_WINDOW_SECONDS).
 	 */
@@ -235,9 +293,7 @@
 		this.accelBufferX = appendAndTrim(this.accelBufferX, samples.map(pluckX), bufferSize);
 		this.accelBufferY = appendAndTrim(this.accelBufferY, samples.map(pluckY), bufferSize);
 		this.accelBufferZ = appendAndTrim(this.accelBufferZ, samples.map(pluckZ), bufferSize);
-		drawLineChart(this.accelCanvasX, this.accelBufferX, bufferSize, ACCEL_AXIS_COLORS.x, ACCEL_X_MIN, ACCEL_X_MAX);
-		drawLineChart(this.accelCanvasY, this.accelBufferY, bufferSize, ACCEL_AXIS_COLORS.y, ACCEL_Y_MIN, ACCEL_Y_MAX);
-		drawLineChart(this.accelCanvasZ, this.accelBufferZ, bufferSize, ACCEL_AXIS_COLORS.z, ACCEL_Z_MIN, ACCEL_Z_MAX);
+		drawAccelChart(this.accelCanvas, this.accelBufferX, this.accelBufferY, this.accelBufferZ, bufferSize);
 	};
 
 	SubjectCard.prototype.onVelocity = function (speed) {

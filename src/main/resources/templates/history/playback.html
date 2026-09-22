@@ -25,19 +25,14 @@
 					<div>속도 <div class="value velocity-value">-</div></div>
 					<div>위치 <div class="value loc-status">-</div></div>
 				</div>
-				<canvas class="ecg-canvas" id="ecg-canvas" width="400" height="90"></canvas>
-				<div class="accel-charts">
-					<div class="accel-chart-row">
+				<canvas class="ecg-canvas" id="ecg-canvas" width="700" height="140"></canvas>
+				<div class="accel-panel">
+					<canvas class="accel-canvas" id="accel-canvas" width="700" height="110"></canvas>
+					<!-- X/Y/Z 범례는 캔버스 위 자기 줄을 차지하지 않고, 캔버스 좌측 하단 안쪽에 겹쳐서 떠 있다. -->
+					<div class="accel-legend">
 						<span class="accel-axis-label accel-axis-x">X</span>
-						<canvas class="accel-canvas" id="accel-canvas-x" width="400" height="48"></canvas>
-					</div>
-					<div class="accel-chart-row">
 						<span class="accel-axis-label accel-axis-y">Y</span>
-						<canvas class="accel-canvas" id="accel-canvas-y" width="400" height="48"></canvas>
-					</div>
-					<div class="accel-chart-row">
 						<span class="accel-axis-label accel-axis-z">Z</span>
-						<canvas class="accel-canvas" id="accel-canvas-z" width="400" height="48"></canvas>
 					</div>
 				</div>
 			</div>
