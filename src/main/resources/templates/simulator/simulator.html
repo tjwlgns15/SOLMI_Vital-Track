@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8">
+	<meta name="_csrf" th:content="${_csrf.token}">
+	<meta name="_csrf_header" th:content="${_csrf.headerName}">
+	<title>시뮬레이터 - VitalTrack</title>
+	<link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/nav :: nav}"></div>
+<div class="page">
+	<h1>스마트폰 앱 시뮬레이터</h1>
+	<p class="text-muted">
+		실제 웨어러블 디바이스 + 스마트폰 앱 대신, 대상을 선택하고 측정을 시작하면
+		가짜 GPS 위치와 ECG/가속도/속도 신호를 주기적으로 생성해 서버로 전송합니다.
+	</p>
+
+	<div class="card">
+		<div id="subject-loading" class="empty-state">측정 대상을 불러오는 중...</div>
+		<div id="subject-empty" class="empty-state" style="display:none;">
+			등록된 측정 대상이 없습니다. <a th:href="@{/subjects}">측정 대상을 먼저 등록해주세요.</a>
+		</div>
+		<div id="subject-controls" style="display:none;">
+			<div class="simulator-controls">
+				<div class="form-group" style="flex:1; margin-bottom:0;">
+					<label for="subject-select">측정 대상</label>
+					<select id="subject-select"></select>
+				</div>
+				<button id="start-btn" class="btn">측정 시작</button>
+				<button id="stop-btn" class="btn btn-danger" disabled>측정 종료</button>
+			</div>
+			<div class="simulator-log" id="log"></div>
+		</div>
+	</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
+<script th:src="@{/js/simulator.js}"></script>
+</body>
+</html>

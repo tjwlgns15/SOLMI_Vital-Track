@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+<div th:fragment="nav" class="navbar">
+	<a class="brand" th:href="@{/dashboard}">
+		<svg class="brand-mark" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+			<path d="M2 12h4l2-7 4 14 3-9 2 4h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+		</svg>
+		VitalTrack
+	</a>
+	<div class="nav-links">
+		<a th:href="@{/dashboard}">모니터링</a>
+		<a th:href="@{/subjects}">측정 대상</a>
+		<a th:href="@{/history}">이력</a>
+		<a th:href="@{/simulator}">시뮬레이터(폰 대체)</a>
+		<span sec:authentication="name">사용자</span>
+		<form th:action="@{/logout}" method="post" style="display:inline">
+			<button type="submit" class="btn btn-outline">로그아웃</button>
+		</form>
+	</div>
+</div>
+</body>
+</html>

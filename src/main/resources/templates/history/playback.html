@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8">
+	<title>측정 이력 재생 - VitalTrack</title>
+	<link rel="stylesheet" th:href="@{/css/style.css}">
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+</head>
+<body>
+<div th:replace="~{fragments/nav :: nav}"></div>
+<div class="page-wide">
+	<div class="split-layout">
+		<div class="map-panel">
+			<div id="map"></div>
+		</div>
+		<div class="signal-panel">
+			<div class="card" id="playback-header">
+				<h2 id="subject-title">불러오는 중...</h2>
+				<p id="session-time" class="session-meta"></p>
+			</div>
+
+			<div class="subject-card">
+				<div class="vitals-row">
+					<div>ECG <div class="value ecg-status">-</div></div>
+					<div>속도 <div class="value velocity-value">-</div></div>
+					<div>위치 <div class="value loc-status">-</div></div>
+				</div>
+				<canvas class="ecg-canvas" id="ecg-canvas" width="400" height="90"></canvas>
+				<div class="accel-charts">
+					<div class="accel-chart-row">
+						<span class="accel-axis-label accel-axis-x">X</span>
+						<canvas class="accel-canvas" id="accel-canvas-x" width="400" height="48"></canvas>
+					</div>
+					<div class="accel-chart-row">
+						<span class="accel-axis-label accel-axis-y">Y</span>
+						<canvas class="accel-canvas" id="accel-canvas-y" width="400" height="48"></canvas>
+					</div>
+					<div class="accel-chart-row">
+						<span class="accel-axis-label accel-axis-z">Z</span>
+						<canvas class="accel-canvas" id="accel-canvas-z" width="400" height="48"></canvas>
+					</div>
+				</div>
+			</div>
+
+			<div class="card">
+				<div class="playback-controls">
+					<button id="play-btn" class="btn">▶ 재생</button>
+					<select id="speed-select">
+						<option value="1">1배속</option>
+						<option value="2">2배속</option>
+						<option value="4">4배속</option>
+						<option value="8">8배속</option>
+					</select>
+					<span id="time-label" class="time-label">00:00 / 00:00</span>
+				</div>
+				<input type="range" id="seek-bar" min="0" max="1000" value="0">
+			</div>
+		</div>
+	</div>
+</div>
+
+<script th:inline="javascript">
+	/*<![CDATA[*/
+	var SESSION_ID = /*[[${sessionId}]]*/ 0;
+	/*]]>*/
+</script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script th:src="@{/js/playback.js}"></script>
+</body>
+</html>

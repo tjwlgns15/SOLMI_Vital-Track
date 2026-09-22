@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8">
+	<title>실시간 모니터링 - VitalTrack</title>
+	<link rel="stylesheet" th:href="@{/css/style.css}">
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+</head>
+<body>
+<div th:replace="~{fragments/nav :: nav}"></div>
+<div class="page-wide">
+	<div class="split-layout">
+		<div class="map-panel">
+			<div id="map"></div>
+		</div>
+		<div class="signal-panel" id="signal-panel">
+			<p th:if="${#lists.isEmpty(subjects) and !hasRegisteredSubjects}"
+			   id="empty-state-no-subjects" class="empty-state">
+				등록된 측정 대상이 없습니다. <a th:href="@{/subjects}">측정 대상을 먼저 등록해주세요.</a>
+			</p>
+			<p th:if="${#lists.isEmpty(subjects) and hasRegisteredSubjects}"
+			   id="empty-state-no-active" class="empty-state">
+				현재 측정 중인 대상이 없습니다. <a th:href="@{/simulator}">측정을 시작해보세요.</a>
+			</p>
+		</div>
+	</div>
+</div>
+
+<script th:inline="javascript">
+	/*<![CDATA[*/
+	var SUBJECTS = /*[[${subjects}]]*/ [];
+	var MEMBER_ID = /*[[${memberId}]]*/ null;
+	/*]]>*/
+</script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
+<script th:src="@{/js/dashboard.js}"></script>
+</body>
+</html>
