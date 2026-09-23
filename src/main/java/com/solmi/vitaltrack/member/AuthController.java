@@ -2,6 +2,8 @@ package com.solmi.vitaltrack.member;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 public class AuthController {
 
 	private final MemberService memberService;
+	private final MessageSource messageSource;
 
 	@GetMapping("/login")
 	public String loginPage() {
@@ -39,8 +42,10 @@ public class AuthController {
 		}
 		try {
 			memberService.signUp(request);
-		} catch (IllegalArgumentException e) {
-			model.addAttribute("errorMessage", e.getMessage());
+		} catch (DuplicateLoginIdException e) {
+			String message = messageSource.getMessage(
+					"signup.error.duplicateLoginId", new Object[] {e.getLoginId()}, LocaleContextHolder.getLocale());
+			model.addAttribute("errorMessage", message);
 			return "auth/signup";
 		}
 		return "redirect:/login?signup=success";

@@ -9,6 +9,7 @@ import com.solmi.vitaltrack.measurement.realtime.LocationMessage;
 import com.solmi.vitaltrack.measurement.realtime.VelocityMessage;
 import com.solmi.vitaltrack.member.Member;
 import com.solmi.vitaltrack.member.MemberRepository;
+import com.solmi.vitaltrack.subject.SubjectTypeLabels;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -34,6 +35,7 @@ public class MeasurementHistoryService {
 	private final EcgSampleRecordRepository ecgSampleRecordRepository;
 	private final AccelerationRecordRepository accelerationRecordRepository;
 	private final VelocityRecordRepository velocityRecordRepository;
+	private final SubjectTypeLabels subjectTypeLabels;
 
 	@Transactional
 	public void recordLocation(MeasurementSession session, LocationMessage message) {
@@ -65,7 +67,7 @@ public class MeasurementHistoryService {
 	public List<SessionHistoryResponse> findEndedSessions(Long memberId) {
 		Member owner = getMember(memberId);
 		return sessionRepository.findByOwnerAndStatus(owner, SessionStatus.ENDED).stream()
-				.map(SessionHistoryResponse::from)
+				.map(session -> SessionHistoryResponse.from(session, subjectTypeLabels))
 				.toList();
 	}
 
@@ -106,7 +108,8 @@ public class MeasurementHistoryService {
 						record.getSpeed(), offsetMs(baseline, record.getMeasuredAt())))
 				.toList();
 
-		return new PlaybackResponse(SessionHistoryResponse.from(session), locations, ecgBatches, accelerations, velocities);
+		return new PlaybackResponse(
+				SessionHistoryResponse.from(session, subjectTypeLabels), locations, ecgBatches, accelerations, velocities);
 	}
 
 	private Member getMember(Long memberId) {

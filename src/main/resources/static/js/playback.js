@@ -252,7 +252,7 @@
 				} else {
 					this.marker.setLatLng(pos);
 				}
-				document.querySelector(".loc-status").textContent = "재생 중";
+				document.querySelector(".loc-status").textContent = MESSAGES.playing;
 			}
 
 			drawAccelChart(this.accelCanvas, state.accelBufferX, state.accelBufferY, state.accelBufferZ, state.accelBufferSize);
@@ -261,7 +261,7 @@
 				document.querySelector(".velocity-value").textContent = state.velocity.speed.toFixed(2) + " km/h";
 			}
 
-			document.querySelector(".ecg-status").textContent = state.ecgBuffer.length > 0 ? "재생 중" : "-";
+			document.querySelector(".ecg-status").textContent = state.ecgBuffer.length > 0 ? MESSAGES.playing : "-";
 			drawLineChart(this.ecgCanvas, state.ecgBuffer, state.ecgBufferSize, ECG_COLOR, ECG_MIN, ECG_MAX);
 		}
 	};
@@ -297,14 +297,14 @@
 				this.currentMs = 0;
 			}
 			this.playing = true;
-			this.playBtn.textContent = "⏸ 일시정지";
+			this.playBtn.textContent = MESSAGES.pause;
 			this.lastTick = Date.now();
 			this.timer = setInterval(this._tick.bind(this), TICK_MS);
 		},
 
 		_pause: function () {
 			this.playing = false;
-			this.playBtn.textContent = "▶ 재생";
+			this.playBtn.textContent = MESSAGES.play;
 			clearInterval(this.timer);
 		},
 
@@ -344,7 +344,7 @@
 		fetch("/api/history/sessions/" + SESSION_ID + "/playback")
 			.then(function (res) {
 				if (!res.ok) {
-					throw new Error("재생 데이터를 불러오지 못했습니다");
+					throw new Error(MESSAGES.loadError);
 				}
 				return res.json();
 			})
@@ -360,7 +360,7 @@
 				PlaybackPlayer.init(data);
 			})
 			.catch(function (err) {
-				document.getElementById("subject-title").textContent = "오류: " + err.message;
+				document.getElementById("subject-title").textContent = MESSAGES.errorPrefix + err.message;
 			});
 	}
 

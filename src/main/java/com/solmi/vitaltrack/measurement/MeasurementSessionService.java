@@ -6,6 +6,7 @@ import com.solmi.vitaltrack.member.MemberRepository;
 import com.solmi.vitaltrack.subject.Subject;
 import com.solmi.vitaltrack.subject.SubjectResponse;
 import com.solmi.vitaltrack.subject.SubjectService;
+import com.solmi.vitaltrack.subject.SubjectTypeLabels;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -41,6 +42,7 @@ public class MeasurementSessionService {
 	private final SessionActivityTracker activityTracker;
 	private final ActivityMonitorService activityMonitorService;
 	private final ApplicationEventPublisher eventPublisher;
+	private final SubjectTypeLabels subjectTypeLabels;
 
 	@Transactional
 	public SessionResponse start(Long subjectId, Long memberId) {
@@ -60,8 +62,9 @@ public class MeasurementSessionService {
 		} catch (DataIntegrityViolationException e) {
 			throw new IllegalStateException("이미 진행 중인 측정 세션이 있습니다");
 		}
-		eventPublisher.publishEvent(new MeasurementSessionStartedEvent(memberId, SubjectResponse.from(subject)));
-		return SessionResponse.from(session);
+		eventPublisher.publishEvent(
+				new MeasurementSessionStartedEvent(memberId, SubjectResponse.from(subject, subjectTypeLabels)));
+		return SessionResponse.from(session, subjectTypeLabels);
 	}
 
 	@Transactional
@@ -75,13 +78,13 @@ public class MeasurementSessionService {
 		activityTracker.forget(sessionId);
 		activityMonitorService.forgetSession(sessionId);
 		eventPublisher.publishEvent(new MeasurementSessionEndedEvent(memberId, session.getSubjectId()));
-		return SessionResponse.from(session);
+		return SessionResponse.from(session, subjectTypeLabels);
 	}
 
 	public List<SessionResponse> findActiveSessions(Long memberId) {
 		Member owner = getOwner(memberId);
 		return sessionRepository.findByOwnerAndStatus(owner, SessionStatus.ACTIVE).stream()
-				.map(SessionResponse::from)
+				.map(session -> SessionResponse.from(session, subjectTypeLabels))
 				.toList();
 	}
 
@@ -92,7 +95,7 @@ public class MeasurementSessionService {
 	public List<SubjectResponse> findSubjectsWithActiveSession(Long memberId) {
 		Member owner = getOwner(memberId);
 		return sessionRepository.findByOwnerAndStatus(owner, SessionStatus.ACTIVE).stream()
-				.map(session -> SubjectResponse.from(session.getSubject()))
+				.map(session -> SubjectResponse.from(session.getSubject(), subjectTypeLabels))
 				.toList();
 	}
 

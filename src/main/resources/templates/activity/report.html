@@ -2,31 +2,43 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
 	<meta charset="UTF-8">
-	<title>활동 리포트 - VitalTrack</title>
+	<title th:text="#{report.title}">활동 리포트 - VitalTrack</title>
 	<link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
 <div th:replace="~{fragments/nav :: nav}"></div>
+<script th:inline="javascript">
+	/*<![CDATA[*/
+	var MESSAGES = {
+		hoursMinutes: /*[[#{report.js.hoursMinutes}]]*/ "{0}시간 {1}분",
+		minutesOnly: /*[[#{report.js.minutesOnly}]]*/ "{0}분",
+		loadError: /*[[#{report.js.loadError}]]*/ "리포트를 불러오지 못했습니다",
+		sessionCountLabel: /*[[#{report.js.sessionCountLabel}]]*/ "그 날짜와 겹치는 측정 세션 {0}개",
+		alertCount: /*[[#{report.js.alertCount}]]*/ "{0}회",
+		sessionCount: /*[[#{report.js.sessionCount}]]*/ "{0}개"
+	};
+	/*]]>*/
+</script>
 <div class="page">
-	<h1>일일 활동량 리포트</h1>
-	<p class="text-muted">동물 측정 대상의 하루 동안 활동 수준(정지/보행/활발한 움직임)과 지속 휴식·이상행동 의심 알림을 집계해서 보여줍니다.</p>
+	<h1 th:text="#{report.heading}">일일 활동량 리포트</h1>
+	<p class="text-muted" th:text="#{report.description}">동물 측정 대상의 하루 동안 활동 수준(정지/보행/활발한 움직임)과 지속 휴식·이상행동 의심 알림을 집계해서 보여줍니다.</p>
 
 	<div class="card" th:if="${not #lists.isEmpty(subjects)}">
 		<div class="report-controls">
 			<div class="form-group" style="flex:1; margin-bottom:0;">
-				<label for="subject-select">측정 대상</label>
+				<label for="subject-select" th:text="#{report.label.subject}">측정 대상</label>
 				<select id="subject-select">
 					<option th:each="s : ${subjects}" th:value="${s.id}" th:text="${s.name}"></option>
 				</select>
 			</div>
 			<div class="form-group" style="margin-bottom:0;">
-				<label for="date-input">날짜</label>
+				<label for="date-input" th:text="#{report.label.date}">날짜</label>
 				<input type="date" id="date-input" th:value="${#temporals.format(today, 'yyyy-MM-dd')}">
 			</div>
-			<button id="load-btn" class="btn">조회</button>
+			<button id="load-btn" class="btn" th:text="#{report.button.load}">조회</button>
 		</div>
 
-		<p id="report-loading" class="text-muted text-sm">불러오는 중...</p>
+		<p id="report-loading" class="text-muted text-sm" th:text="#{report.loading}">불러오는 중...</p>
 		<p id="report-error" class="alert alert-error" style="display:none;"></p>
 
 		<div id="report-result" style="display:none;">
@@ -35,7 +47,7 @@
 				<span id="report-session-count" class="report-session-count"></span>
 			</div>
 
-			<p id="report-empty" class="empty-state" style="display:none;">해당 날짜에 측정된 가속도 데이터가 없습니다.</p>
+			<p id="report-empty" class="empty-state" style="display:none;" th:text="#{report.empty}">해당 날짜에 측정된 가속도 데이터가 없습니다.</p>
 
 			<div id="report-body">
 				<div class="activity-bar">
@@ -44,30 +56,30 @@
 					<div id="bar-active" class="activity-bar-segment activity-bar-active" style="width:0%"></div>
 				</div>
 				<div class="report-legend">
-					<span class="legend-item"><span class="legend-dot rest"></span>정지 <span id="legend-rest" class="legend-value">-</span></span>
-					<span class="legend-item"><span class="legend-dot walking"></span>보행 <span id="legend-walking" class="legend-value">-</span></span>
-					<span class="legend-item"><span class="legend-dot active"></span>활발한 움직임 <span id="legend-active" class="legend-value">-</span></span>
+					<span class="legend-item"><span class="legend-dot rest"></span><span th:text="#{report.legend.rest}">정지</span> <span id="legend-rest" class="legend-value">-</span></span>
+					<span class="legend-item"><span class="legend-dot walking"></span><span th:text="#{report.legend.walking}">보행</span> <span id="legend-walking" class="legend-value">-</span></span>
+					<span class="legend-item"><span class="legend-dot active"></span><span th:text="#{report.legend.active}">활발한 움직임</span> <span id="legend-active" class="legend-value">-</span></span>
 				</div>
 
 				<div class="report-stats">
 					<div class="report-stat">
 						<div id="stat-rest-alerts" class="report-stat-value warning">-</div>
-						<div class="report-stat-label">지속 휴식 알림</div>
+						<div class="report-stat-label" th:text="#{report.stat.restAlerts}">지속 휴식 알림</div>
 					</div>
 					<div class="report-stat">
 						<div id="stat-abnormal-alerts" class="report-stat-value danger">-</div>
-						<div class="report-stat-label">이상행동 의심 알림</div>
+						<div class="report-stat-label" th:text="#{report.stat.abnormalAlerts}">이상행동 의심 알림</div>
 					</div>
 					<div class="report-stat">
 						<div id="stat-session-count" class="report-stat-value">-</div>
-						<div class="report-stat-label">측정 세션 수</div>
+						<div class="report-stat-label" th:text="#{report.stat.sessionCount}">측정 세션 수</div>
 					</div>
 				</div>
 			</div>
 		</div>
 	</div>
 
-	<p th:if="${#lists.isEmpty(subjects)}" class="empty-state">
+	<p th:if="${#lists.isEmpty(subjects)}" class="empty-state" th:text="#{report.empty.noSubjects}">
 		등록된 동물 측정 대상이 없습니다. 먼저 "측정 대상" 메뉴에서 동물을 등록해주세요.
 	</p>
 </div>

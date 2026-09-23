@@ -14,6 +14,7 @@ public class SubjectService {
 
 	private final SubjectRepository subjectRepository;
 	private final MemberRepository memberRepository;
+	private final SubjectTypeLabels subjectTypeLabels;
 
 	@Transactional
 	public Long register(Long memberId, SubjectRegisterRequest request) {
@@ -25,7 +26,7 @@ public class SubjectService {
 	public List<SubjectResponse> findMySubjects(Long memberId) {
 		Member owner = getMember(memberId);
 		return subjectRepository.findByOwnerOrderByCreatedAtDesc(owner).stream()
-				.map(SubjectResponse::from)
+				.map(subject -> SubjectResponse.from(subject, subjectTypeLabels))
 				.toList();
 	}
 

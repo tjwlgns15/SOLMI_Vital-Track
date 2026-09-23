@@ -2,24 +2,24 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
 	<meta charset="UTF-8">
-	<title>측정 이력 - VitalTrack</title>
+	<title th:text="#{history.list.title}">측정 이력 - VitalTrack</title>
 	<link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
 <div th:replace="~{fragments/nav :: nav}"></div>
 <div class="page">
-	<h1>측정 이력</h1>
-	<p class="text-muted">종료된 측정 세션 목록입니다. "재생"을 누르면 기록된 위치/ECG/가속도/속도를 그대로 재생해볼 수 있습니다.</p>
+	<h1 th:text="#{history.list.heading}">측정 이력</h1>
+	<p class="text-muted" th:text="#{history.list.description}">종료된 측정 세션 목록입니다. "재생"을 누르면 기록된 위치/ECG/가속도/속도를 그대로 재생해볼 수 있습니다.</p>
 
 	<div class="card">
 		<table th:if="${not #lists.isEmpty(sessions)}">
 			<thead>
 			<tr>
-				<th>대상</th>
-				<th>종류</th>
-				<th>시작</th>
-				<th>종료</th>
-				<th>측정 시간</th>
+				<th th:text="#{history.list.column.subject}">대상</th>
+				<th th:text="#{history.list.column.type}">종류</th>
+				<th th:text="#{history.list.column.startedAt}">시작</th>
+				<th th:text="#{history.list.column.endedAt}">종료</th>
+				<th th:text="#{history.list.column.duration}">측정 시간</th>
 				<th></th>
 				<th></th>
 			</tr>
@@ -28,23 +28,23 @@
 			<tr th:each="s : ${sessions}">
 				<td th:text="${s.subjectName}"></td>
 				<td>
-					<span class="badge" th:classappend="${s.subjectTypeLabel == '사람'} ? 'badge-human' : 'badge-animal'"
+					<span class="badge" th:classappend="${s.subjectType.name() == 'HUMAN'} ? 'badge-human' : 'badge-animal'"
 						th:text="${s.subjectTypeLabel}"></span>
 				</td>
 				<td th:text="${#temporals.format(s.startedAt, 'yyyy-MM-dd HH:mm:ss')}"></td>
 				<td th:text="${s.endedAt != null} ? ${#temporals.format(s.endedAt, 'yyyy-MM-dd HH:mm:ss')} : '-'"></td>
-				<td th:text="${s.durationSeconds / 60} + '분 ' + ${s.durationSeconds % 60} + '초'"></td>
+				<td th:text="#{history.list.duration(${s.durationSeconds / 60}, ${s.durationSeconds % 60})}"></td>
 				<td>
 					<span th:if="${s.endReason == T(com.solmi.vitaltrack.measurement.SessionEndReason).TIMEOUT}"
-						class="badge badge-timeout" title="앱이 데이터 전송을 멈춘 채 응답이 없어 서버가 대신 종료했습니다">
-						비정상 종료
+						class="badge badge-timeout" th:title="#{history.list.timeout.title}" title="앱이 데이터 전송을 멈춘 채 응답이 없어 서버가 대신 종료했습니다">
+						<span th:text="#{history.list.timeout.badge}">비정상 종료</span>
 					</span>
 				</td>
-				<td><a th:href="@{'/history/' + ${s.sessionId}}" class="btn">재생</a></td>
+				<td><a th:href="@{'/history/' + ${s.sessionId}}" class="btn" th:text="#{history.list.button.play}">재생</a></td>
 			</tr>
 			</tbody>
 		</table>
-		<p th:if="${#lists.isEmpty(sessions)}" class="empty-state">아직 종료된 측정 세션이 없습니다.</p>
+		<p th:if="${#lists.isEmpty(sessions)}" class="empty-state" th:text="#{history.list.empty}">아직 종료된 측정 세션이 없습니다.</p>
 	</div>
 </div>
 </body>

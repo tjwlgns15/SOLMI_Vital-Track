@@ -4,41 +4,55 @@
 	<meta charset="UTF-8">
 	<meta name="_csrf" th:content="${_csrf.token}">
 	<meta name="_csrf_header" th:content="${_csrf.headerName}">
-	<title>시뮬레이터 - VitalTrack</title>
+	<title th:text="#{simulator.title}">시뮬레이터 - VitalTrack</title>
 	<link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
+<script th:inline="javascript">
+	/*<![CDATA[*/
+	var MESSAGES = {
+		loadSubjectsError: /*[[#{simulator.js.loadSubjectsError}]]*/ "측정 대상 목록을 불러오지 못했습니다",
+		startFailed: /*[[#{simulator.js.startFailed}]]*/ "측정 시작에 실패했습니다",
+		stopFailed: /*[[#{simulator.js.stopFailed}]]*/ "측정 종료에 실패했습니다",
+		errorPrefix: /*[[#{simulator.js.errorPrefix}]]*/ "오류: ",
+		connected: /*[[#{simulator.js.connected}]]*/ "서버에 연결되었습니다.",
+		startedLog: /*[[#{simulator.js.startedLog}]]*/ "측정 시작: ",
+		accelModeChangedLog: /*[[#{simulator.js.accelModeChangedLog}]]*/ "가속도 시뮬레이션 모드 변경: ",
+		stoppedLog: /*[[#{simulator.js.stoppedLog}]]*/ "측정 종료: sessionId="
+	};
+	/*]]>*/
+</script>
 <div th:replace="~{fragments/nav :: nav}"></div>
 <div class="page">
-	<h1>스마트폰 앱 시뮬레이터</h1>
-	<p class="text-muted">
+	<h1 th:text="#{simulator.heading}">스마트폰 앱 시뮬레이터</h1>
+	<p class="text-muted" th:text="#{simulator.description}">
 		실제 웨어러블 디바이스 + 스마트폰 앱 대신, 대상을 선택하고 측정을 시작하면
 		가짜 GPS 위치와 ECG/가속도/속도 신호를 주기적으로 생성해 서버로 전송합니다.
 	</p>
 
 	<div class="card">
-		<div id="subject-loading" class="empty-state">측정 대상을 불러오는 중...</div>
+		<div id="subject-loading" class="empty-state" th:text="#{simulator.loading}">측정 대상을 불러오는 중...</div>
 		<div id="subject-empty" class="empty-state" style="display:none;">
-			등록된 측정 대상이 없습니다. <a th:href="@{/subjects}">측정 대상을 먼저 등록해주세요.</a>
+			<span th:text="#{simulator.empty.noSubjects}">등록된 측정 대상이 없습니다.</span> <a th:href="@{/subjects}" th:text="#{simulator.empty.noSubjects.link}">측정 대상을 먼저 등록해주세요.</a>
 		</div>
 		<div id="subject-controls" style="display:none;">
 			<div class="simulator-controls">
 				<div class="form-group" style="flex:1; margin-bottom:0;">
-					<label for="subject-select">측정 대상</label>
+					<label for="subject-select" th:text="#{simulator.label.subject}">측정 대상</label>
 					<select id="subject-select"></select>
 				</div>
 				<div class="form-group" style="flex:1; margin-bottom:0;">
-					<label for="accel-mode-select">가속도 시뮬레이션 모드</label>
+					<label for="accel-mode-select" th:text="#{simulator.label.accelMode}">가속도 시뮬레이션 모드</label>
 					<select id="accel-mode-select">
-						<option value="WALK">기본 (보행)</option>
-						<option value="REST">정지 상태</option>
-						<option value="ABNORMAL">이상행동 (뒤척임)</option>
+						<option value="WALK" th:text="#{simulator.accelMode.walk}">기본 (보행)</option>
+						<option value="REST" th:text="#{simulator.accelMode.rest}">정지 상태</option>
+						<option value="ABNORMAL" th:text="#{simulator.accelMode.abnormal}">이상행동 (뒤척임)</option>
 					</select>
 				</div>
-				<button id="start-btn" class="btn">측정 시작</button>
-				<button id="stop-btn" class="btn btn-danger" disabled>측정 종료</button>
+				<button id="start-btn" class="btn" th:text="#{simulator.button.start}">측정 시작</button>
+				<button id="stop-btn" class="btn btn-danger" disabled th:text="#{simulator.button.stop}">측정 종료</button>
 			</div>
-			<p class="text-muted text-sm" style="margin-top:8px;">
+			<p class="text-muted text-sm" style="margin-top:8px;" th:text="#{simulator.hint}">
 				가속도 시뮬레이션 모드는 측정 중에도 바로 바꿀 수 있습니다. "정지 상태"는 몇 분간 유지하면
 				대시보드에 휴식 알림이, "이상행동"은 2초 간격으로 정지↔격한 움직임을 반복해 짧은 시간 안에
 				이상행동 의심 알림이 뜨는지 확인할 수 있습니다.

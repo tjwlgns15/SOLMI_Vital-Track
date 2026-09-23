@@ -11,12 +11,12 @@ public record SubjectResponse(
 		String typeLabel,
 		String species
 ) {
-	public static SubjectResponse from(Subject subject) {
+	public static SubjectResponse from(Subject subject, SubjectTypeLabels typeLabels) {
 		return new SubjectResponse(
 				subject.getId(),
 				subject.getName(),
 				subject.getType(),
-				subject.getType().getLabel(),
+				typeLabels.labelOf(subject.getType()),
 				subject.getSpecies()
 		);
 	}

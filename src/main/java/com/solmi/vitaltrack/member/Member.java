@@ -40,6 +40,10 @@ public class Member extends BaseTimeEntity {
 	@Column(nullable = false, length = 20)
 	private MemberRole role;
 
+	/** 회원이 언어 전환 드롭다운으로 마지막으로 고른 언어("ko"/"en"). 한 번도 안 바꿨으면 null - 이땐 기본값(한국어)으로 취급한다. */
+	@Column(length = 10)
+	private String preferredLanguage;
+
 	private Member(String loginId, String encodedPassword, String name, MemberRole role) {
 		this.loginId = loginId;
 		this.password = encodedPassword;
@@ -57,5 +61,10 @@ public class Member extends BaseTimeEntity {
 
 	public boolean isOwnerOf(Long memberId) {
 		return this.id.equals(memberId);
+	}
+
+	/** 실시간(WebSocket) 알림처럼 브라우저 쿠키에 접근할 수 없는 경로에서도 쓸 수 있도록 언어 선택을 남긴다. */
+	public void changePreferredLanguage(String languageTag) {
+		this.preferredLanguage = languageTag;
 	}
 }

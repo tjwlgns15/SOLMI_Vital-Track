@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
 	<meta charset="UTF-8">
-	<title>실시간 모니터링 - VitalTrack</title>
+	<title th:text="#{dashboard.title}">실시간 모니터링 - VitalTrack</title>
 	<link rel="stylesheet" th:href="@{/css/style.css}">
 	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
@@ -16,11 +16,11 @@
 		<div class="signal-panel dashboard-panel" id="signal-panel">
 			<p th:if="${#lists.isEmpty(subjects) and !hasRegisteredSubjects}"
 			   id="empty-state-no-subjects" class="empty-state">
-				등록된 측정 대상이 없습니다. <a th:href="@{/subjects}">측정 대상을 먼저 등록해주세요.</a>
+				<span th:text="#{dashboard.empty.noSubjects}">등록된 측정 대상이 없습니다.</span> <a th:href="@{/subjects}" th:text="#{dashboard.empty.noSubjects.link}">측정 대상을 먼저 등록해주세요.</a>
 			</p>
 			<p th:if="${#lists.isEmpty(subjects) and hasRegisteredSubjects}"
 			   id="empty-state-no-active" class="empty-state">
-				현재 측정 중인 대상이 없습니다. <a th:href="@{/simulator}">측정을 시작해보세요.</a>
+				<span th:text="#{dashboard.empty.noActive}">현재 측정 중인 대상이 없습니다.</span> <a th:href="@{/simulator}" th:text="#{dashboard.empty.noActive.link}">측정을 시작해보세요.</a>
 			</p>
 		</div>
 	</div>
@@ -30,6 +30,15 @@
 	/*<![CDATA[*/
 	var SUBJECTS = /*[[${subjects}]]*/ [];
 	var MEMBER_ID = /*[[${memberId}]]*/ null;
+	var MESSAGES = {
+		vitalsEcg: /*[[#{vitals.ecg}]]*/ "ECG",
+		vitalsVelocity: /*[[#{vitals.velocity}]]*/ "속도",
+		vitalsLocation: /*[[#{vitals.location}]]*/ "위치",
+		vitalsActivity: /*[[#{vitals.activity}]]*/ "활동",
+		ecgWaiting: /*[[#{dashboard.js.ecgWaiting}]]*/ "대기 중",
+		ecgNoSignal: /*[[#{dashboard.js.ecgNoSignal}]]*/ "신호 없음",
+		receiving: /*[[#{dashboard.js.receiving}]]*/ "수신 중"
+	};
 	/*]]>*/
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

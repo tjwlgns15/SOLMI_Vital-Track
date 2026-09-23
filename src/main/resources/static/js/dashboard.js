@@ -219,10 +219,10 @@
 			'  <div class="subject-identity"><span class="status-dot offline"></span><span class="name"></span> ' +
 			'  <span class="badge ' + badgeClass + '"></span></div>' +
 			'  <div class="vitals-row">' +
-			'    <div>ECG <div class="value ecg-status">대기 중</div></div>' +
-			'    <div>속도 <div class="value velocity-value">-</div></div>' +
-			'    <div>위치 <div class="value loc-status">-</div></div>' +
-			(isAnimal ? '    <div>활동 <div class="value activity-status">-</div></div>' : '') +
+			'    <div>' + MESSAGES.vitalsEcg + ' <div class="value ecg-status">' + MESSAGES.ecgWaiting + '</div></div>' +
+			'    <div>' + MESSAGES.vitalsVelocity + ' <div class="value velocity-value">-</div></div>' +
+			'    <div>' + MESSAGES.vitalsLocation + ' <div class="value loc-status">-</div></div>' +
+			(isAnimal ? '    <div>' + MESSAGES.vitalsActivity + ' <div class="value activity-status">-</div></div>' : '') +
 			'  </div>' +
 			'</div>' +
 			// 휴식/이상행동 알림은 더 이상 카드 높이를 차지하지 않는다 - 카드 우측 상단에 떠 있는
@@ -266,13 +266,13 @@
 			var dot = this.element.querySelector(".status-dot");
 			dot.classList.remove("live");
 			dot.classList.add("offline");
-			this.element.querySelector(".ecg-status").textContent = "신호 없음";
+			this.element.querySelector(".ecg-status").textContent = MESSAGES.ecgNoSignal;
 		}
 	};
 
 	SubjectCard.prototype.onEcg = function (samples, samplingRateHz) {
 		this.markLive();
-		this.element.querySelector(".ecg-status").textContent = "수신 중";
+		this.element.querySelector(".ecg-status").textContent = MESSAGES.receiving;
 		var bufferSize = Math.round((samplingRateHz || ECG_DEFAULT_SAMPLING_HZ) * ECG_WINDOW_SECONDS);
 		this.ecgBuffer = appendAndTrim(this.ecgBuffer, samples, bufferSize);
 		drawLineChart(this.canvas, this.ecgBuffer, bufferSize, ECG_COLOR, ECG_MIN, ECG_MAX);
@@ -328,7 +328,7 @@
 
 	SubjectCard.prototype.onLocation = function () {
 		this.markLive();
-		this.element.querySelector(".loc-status").textContent = "수신 중";
+		this.element.querySelector(".loc-status").textContent = MESSAGES.receiving;
 	};
 
 	/**

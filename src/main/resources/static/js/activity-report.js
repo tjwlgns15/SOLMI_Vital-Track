@@ -5,14 +5,20 @@
 (function () {
 	"use strict";
 
+	function fmt(pattern, args) {
+		return pattern.replace(/\{(\d+)\}/g, function (match, index) {
+			return args[Number(index)];
+		});
+	}
+
 	function formatDuration(totalSeconds) {
 		var totalMinutes = Math.round(totalSeconds / 60);
 		var hours = Math.floor(totalMinutes / 60);
 		var minutes = totalMinutes % 60;
 		if (hours > 0) {
-			return hours + "시간 " + minutes + "분";
+			return fmt(MESSAGES.hoursMinutes, [hours, minutes]);
 		}
-		return minutes + "분";
+		return fmt(MESSAGES.minutesOnly, [minutes]);
 	}
 
 	var ReportView = {
@@ -54,7 +60,7 @@
 				.then(function (res) {
 					if (!res.ok) {
 						return res.text().then(function (text) {
-							throw new Error(text || "리포트를 불러오지 못했습니다");
+							throw new Error(text || MESSAGES.loadError);
 						});
 					}
 					return res.json();
@@ -75,8 +81,7 @@
 			this.emptyEl.style.display = report.hasData ? "none" : "";
 
 			document.getElementById("report-title").textContent = report.subjectName + " · " + report.date;
-			document.getElementById("report-session-count").textContent =
-				"그 날짜와 겹치는 측정 세션 " + report.sessionCount + "개";
+			document.getElementById("report-session-count").textContent = fmt(MESSAGES.sessionCountLabel, [report.sessionCount]);
 
 			var total = report.restSeconds + report.walkingSeconds + report.activeSeconds;
 			var restPct = total > 0 ? (report.restSeconds / total) * 100 : 0;
@@ -91,9 +96,9 @@
 			document.getElementById("legend-walking").textContent = formatDuration(report.walkingSeconds);
 			document.getElementById("legend-active").textContent = formatDuration(report.activeSeconds);
 
-			document.getElementById("stat-rest-alerts").textContent = report.sustainedRestAlertCount + "회";
-			document.getElementById("stat-abnormal-alerts").textContent = report.abnormalAlertCount + "회";
-			document.getElementById("stat-session-count").textContent = report.sessionCount + "개";
+			document.getElementById("stat-rest-alerts").textContent = fmt(MESSAGES.alertCount, [report.sustainedRestAlertCount]);
+			document.getElementById("stat-abnormal-alerts").textContent = fmt(MESSAGES.alertCount, [report.abnormalAlertCount]);
+			document.getElementById("stat-session-count").textContent = fmt(MESSAGES.sessionCount, [report.sessionCount]);
 		}
 	};
 

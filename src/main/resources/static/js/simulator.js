@@ -38,7 +38,7 @@
 		list: function () {
 			return fetch("/api/subjects").then(function (res) {
 				if (!res.ok) {
-					throw new Error("측정 대상 목록을 불러오지 못했습니다");
+					throw new Error(MESSAGES.loadSubjectsError);
 				}
 				return res.json();
 			});
@@ -54,7 +54,7 @@
 			}).then(function (res) {
 				if (!res.ok) {
 					return res.text().then(function (text) {
-						throw new Error(text || "측정 시작에 실패했습니다");
+						throw new Error(text || MESSAGES.startFailed);
 					});
 				}
 				return res.json();
@@ -67,7 +67,7 @@
 			}).then(function (res) {
 				if (!res.ok) {
 					return res.text().then(function (text) {
-						throw new Error(text || "측정 종료에 실패했습니다");
+						throw new Error(text || MESSAGES.stopFailed);
 					});
 				}
 				return res.json();
@@ -237,7 +237,7 @@
 				});
 				self.controlsEl.style.display = "";
 			}).catch(function (err) {
-				self.loadingEl.textContent = "오류: " + err.message;
+				self.loadingEl.textContent = MESSAGES.errorPrefix + err.message;
 			});
 		},
 
@@ -250,7 +250,7 @@
 				},
 				reconnectDelay: 3000,
 				onConnect: function () {
-					self._log("서버에 연결되었습니다.");
+					self._log(MESSAGES.connected);
 				}
 			});
 			this.stompClient.activate();
@@ -263,13 +263,13 @@
 				self.session = session;
 				self.generator = new VitalSignalGenerator();
 				self.generator.setAccelMode(self.accelModeSelect.value);
-				self._log("측정 시작: " + self.select.selectedOptions[0].textContent + " (sessionId=" + session.sessionId + ")");
+				self._log(MESSAGES.startedLog + self.select.selectedOptions[0].textContent + " (sessionId=" + session.sessionId + ")");
 				self.startBtn.disabled = true;
 				self.stopBtn.disabled = false;
 				self.select.disabled = true;
 				self._startSending(subjectId);
 			}).catch(function (err) {
-				self._log("오류: " + err.message);
+				self._log(MESSAGES.errorPrefix + err.message);
 			});
 		},
 
@@ -277,7 +277,7 @@
 		_onAccelModeChange: function () {
 			if (this.generator) {
 				this.generator.setAccelMode(this.accelModeSelect.value);
-				this._log("가속도 시뮬레이션 모드 변경: " + this.accelModeSelect.selectedOptions[0].textContent);
+				this._log(MESSAGES.accelModeChangedLog + this.accelModeSelect.selectedOptions[0].textContent);
 			}
 		},
 
@@ -287,10 +287,10 @@
 				return;
 			}
 			SessionClient.end(this.session.sessionId).then(function () {
-				self._log("측정 종료: sessionId=" + self.session.sessionId);
+				self._log(MESSAGES.stoppedLog + self.session.sessionId);
 				self._stopSending();
 			}).catch(function (err) {
-				self._log("오류: " + err.message);
+				self._log(MESSAGES.errorPrefix + err.message);
 				self._stopSending();
 			});
 		},

@@ -9,14 +9,20 @@
 		VitalTrack
 	</a>
 	<div class="nav-links">
-		<a th:href="@{/dashboard}">모니터링</a>
-		<a th:href="@{/subjects}">측정 대상</a>
-		<a th:href="@{/history}">이력</a>
-		<a th:href="@{/report}">활동 리포트</a>
-		<a th:href="@{/simulator}">시뮬레이터(폰 대체)</a>
+		<a th:href="@{/dashboard}" th:text="#{nav.monitoring}">모니터링</a>
+		<a th:href="@{/subjects}" th:text="#{nav.subjects}">측정 대상</a>
+		<a th:href="@{/history}" th:text="#{nav.history}">이력</a>
+		<a th:href="@{/report}" th:text="#{nav.report}">활동 리포트</a>
+		<a th:href="@{/simulator}" th:text="#{nav.simulator}">시뮬레이터(폰 대체)</a>
+		<!-- 선택한 언어로 현재 페이지를 다시 요청한다(?lang=ko|en) - LocaleChangeInterceptor가
+		     이 파라미터를 보고 쿠키(LOCALE)를 갱신하므로, 이후 페이지 이동에서는 이 파라미터 없이도 유지된다. -->
+		<select class="lang-select" aria-label="language" onchange="location.href=(location.pathname + '?lang=' + this.value)">
+			<option value="ko" th:selected="${#locale.language == 'ko'}">한국어</option>
+			<option value="en" th:selected="${#locale.language == 'en'}">English</option>
+		</select>
 		<span sec:authentication="name">사용자</span>
 		<form th:action="@{/logout}" method="post" style="display:inline">
-			<button type="submit" class="btn btn-outline">로그아웃</button>
+			<button type="submit" class="btn btn-outline" th:text="#{nav.logout}">로그아웃</button>
 		</form>
 	</div>
 </div>

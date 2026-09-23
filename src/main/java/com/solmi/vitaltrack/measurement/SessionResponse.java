@@ -1,5 +1,6 @@
 package com.solmi.vitaltrack.measurement;
 
+import com.solmi.vitaltrack.subject.SubjectTypeLabels;
 import java.time.LocalDateTime;
 
 public record SessionResponse(
@@ -11,12 +12,12 @@ public record SessionResponse(
 		LocalDateTime startedAt,
 		SessionEndReason endReason
 ) {
-	public static SessionResponse from(MeasurementSession session) {
+	public static SessionResponse from(MeasurementSession session, SubjectTypeLabels subjectTypeLabels) {
 		return new SessionResponse(
 				session.getId(),
 				session.getSubject().getId(),
 				session.getSubject().getName(),
-				session.getSubject().getType().getLabel(),
+				subjectTypeLabels.labelOf(session.getSubject().getType()),
 				session.getStatus(),
 				session.getStartedAt(),
 				session.getEndReason()

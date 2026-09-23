@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
 	<meta charset="UTF-8">
-	<title>측정 이력 재생 - VitalTrack</title>
+	<title th:text="#{playback.title}">측정 이력 재생 - VitalTrack</title>
 	<link rel="stylesheet" th:href="@{/css/style.css}">
 	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
@@ -15,20 +15,20 @@
 		</div>
 		<div class="signal-panel">
 			<div class="card" id="playback-header">
-				<h2 id="subject-title">불러오는 중...</h2>
+				<h2 id="subject-title" th:text="#{playback.loading}">불러오는 중...</h2>
 				<p id="session-time" class="session-meta"></p>
 			</div>
 
 			<div class="subject-card">
 				<div class="vitals-row">
-					<div>ECG <div class="value ecg-status">-</div></div>
-					<div>속도 <div class="value velocity-value">-</div></div>
-					<div>위치 <div class="value loc-status">-</div></div>
+					<div><span th:text="#{vitals.ecg}">ECG</span> <div class="value ecg-status">-</div></div>
+					<div><span th:text="#{vitals.velocity}">속도</span> <div class="value velocity-value">-</div></div>
+					<div><span th:text="#{vitals.location}">위치</span> <div class="value loc-status">-</div></div>
 				</div>
 				<canvas class="ecg-canvas" id="ecg-canvas" width="700" height="140"></canvas>
 				<div class="accel-panel">
 					<canvas class="accel-canvas" id="accel-canvas" width="700" height="110"></canvas>
-					<!-- X/Y/Z 범례는 캔버스 위 자기 줄을 차지하지 않고, 캔버스 좌측 하단 안쪽에 겹쳐서 떠 있다. -->
+					<!-- X/Y/Z legend overlays the bottom-left inside the canvas instead of taking its own row. -->
 					<div class="accel-legend">
 						<span class="accel-axis-label accel-axis-x">X</span>
 						<span class="accel-axis-label accel-axis-y">Y</span>
@@ -39,12 +39,12 @@
 
 			<div class="card">
 				<div class="playback-controls">
-					<button id="play-btn" class="btn">▶ 재생</button>
+					<button id="play-btn" class="btn" th:text="#{playback.button.play}">▶ 재생</button>
 					<select id="speed-select">
-						<option value="1">1배속</option>
-						<option value="2">2배속</option>
-						<option value="4">4배속</option>
-						<option value="8">8배속</option>
+						<option value="1" th:text="#{playback.speed(1)}">1배속</option>
+						<option value="2" th:text="#{playback.speed(2)}">2배속</option>
+						<option value="4" th:text="#{playback.speed(4)}">4배속</option>
+						<option value="8" th:text="#{playback.speed(8)}">8배속</option>
 					</select>
 					<span id="time-label" class="time-label">00:00 / 00:00</span>
 				</div>
@@ -57,6 +57,13 @@
 <script th:inline="javascript">
 	/*<![CDATA[*/
 	var SESSION_ID = /*[[${sessionId}]]*/ 0;
+	var MESSAGES = {
+		playing: /*[[#{playback.js.playing}]]*/ "재생 중",
+		play: /*[[#{playback.button.play}]]*/ "▶ 재생",
+		pause: /*[[#{playback.js.pause}]]*/ "⏸ 일시정지",
+		loadError: /*[[#{playback.js.loadError}]]*/ "재생 데이터를 불러오지 못했습니다",
+		errorPrefix: /*[[#{playback.js.errorPrefix}]]*/ "오류: "
+	};
 	/*]]>*/
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
