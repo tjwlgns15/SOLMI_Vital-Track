@@ -154,9 +154,7 @@ a:hover {
 .navbar .brand {
 	display: inline-flex;
 	align-items: center;
-	gap: 8px;
-	font-weight: 700;
-	font-size: 18px;
+	gap: 10px;
 	letter-spacing: -0.01em;
 	color: var(--color-text);
 }
@@ -167,8 +165,29 @@ a:hover {
 }
 
 .navbar .brand-mark {
+	flex-shrink: 0;
 	color: var(--color-primary);
 	filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.45));
+}
+
+/* 브랜드 타이틀(VitalTrack)과 그 아래 부제(Animal Health Monitor)를 두 줄로 쌓는다. */
+.navbar .brand-text {
+	display: flex;
+	flex-direction: column;
+	line-height: 1.2;
+}
+
+.navbar .brand-title {
+	font-weight: 700;
+	font-size: 17px;
+}
+
+.navbar .brand-subtitle {
+	font-weight: 500;
+	font-size: 10.5px;
+	color: var(--color-text-muted);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
 }
 
 .navbar .nav-links {
@@ -178,6 +197,9 @@ a:hover {
 }
 
 .navbar .nav-links a {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
 	color: var(--color-text-muted);
 	font-size: 14px;
 	font-weight: 500;
@@ -190,6 +212,12 @@ a:hover {
 	background: var(--color-surface-hover);
 	color: var(--color-text);
 	text-decoration: none;
+}
+
+/* 탭 아이콘 - 링크 색(currentColor)을 그대로 따라가므로 hover 시 텍스트와 같이 밝아진다. */
+.navbar .nav-icon {
+	flex-shrink: 0;
+	opacity: 0.85;
 }
 
 /* 언어 전환 드롭다운 - nav-links의 다른 링크들 사이에 자연스럽게 끼워 넣는다. */
@@ -543,6 +571,13 @@ tbody tr:last-child td {
 	height: 100%;
 }
 
+/* 다크 톤 전용 지도 타일(CARTO 등)은 API 키가 필요해져서, 표준(밝은) OSM 타일에 CSS
+   필터를 입혀 다크 테마에 맞춘다. 타일 레이어에만 걸어서 마커/팝업/줌 컨트롤은 원래
+   색 그대로 유지한다(그 위에 얹히는 레이어들까지 반전되면 오히려 알아보기 어려워진다). */
+#map .leaflet-tile-pane {
+	filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9) saturate(0.8);
+}
+
 /* 재생(playback) 화면 - 헤더 카드/신호 카드/컨트롤 카드가 세로로 쌓이는 목록. */
 .signal-panel {
 	order: 1;
@@ -753,8 +788,8 @@ tbody tr:last-child td {
 	width: 100%;
 	background-color: #060b16;
 	background-image:
-		linear-gradient(rgba(148, 163, 184, 0.09) 1px, transparent 1px),
-		linear-gradient(90deg, rgba(148, 163, 184, 0.09) 1px, transparent 1px);
+		linear-gradient(#1a1a1a 1px, transparent 1px),
+		linear-gradient(90deg, #1a1a1a 1px, transparent 1px);
 	background-size: 20px 20px;
 	border: 1px solid var(--color-border-soft);
 	border-radius: 0;
@@ -798,18 +833,18 @@ tbody tr:last-child td {
 }
 
 .accel-axis-x {
-	color: #3987e5;
-	background: rgba(57, 135, 229, 0.15);
+	color: #2f5d8f;
+	background: rgba(47, 93, 143, 0.18);
 }
 
 .accel-axis-y {
-	color: #d95926;
-	background: rgba(217, 89, 38, 0.15);
+	color: #a8481c;
+	background: rgba(168, 72, 28, 0.18);
 }
 
 .accel-axis-z {
-	color: #199e70;
-	background: rgba(25, 158, 112, 0.15);
+	color: #146b4f;
+	background: rgba(20, 107, 79, 0.18);
 }
 
 /* 대시보드(격자 모드) - 카드 높이는 항상 패널의 1/3로 고정이므로, ECG/가속도 차트도

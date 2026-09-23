@@ -3,17 +3,52 @@
 <body>
 <div th:fragment="nav" class="navbar">
 	<a class="brand" th:href="@{/dashboard}">
-		<svg class="brand-mark" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-			<path d="M2 12h4l2-7 4 14 3-9 2 4h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+		<!-- 강아지 발바닥 모양 - 팔뚝살(중앙 타원) + 발가락 4개(작은 타원 4개). -->
+		<svg class="brand-mark" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+			<ellipse cx="12" cy="16" rx="6" ry="5"/>
+			<ellipse cx="4.5" cy="9" rx="2.3" ry="2.8" transform="rotate(-20 4.5 9)"/>
+			<ellipse cx="9" cy="4.5" rx="2.3" ry="2.9"/>
+			<ellipse cx="15" cy="4.5" rx="2.3" ry="2.9"/>
+			<ellipse cx="19.5" cy="9" rx="2.3" ry="2.8" transform="rotate(20 19.5 9)"/>
 		</svg>
-		VitalTrack
+		<span class="brand-text">
+			<span class="brand-title">VitalTrack</span>
+			<span class="brand-subtitle">Animal Health Monitor</span>
+		</span>
 	</a>
 	<div class="nav-links">
-		<a th:href="@{/dashboard}" th:text="#{nav.monitoring}">모니터링</a>
-		<a th:href="@{/subjects}" th:text="#{nav.subjects}">측정 대상</a>
-		<a th:href="@{/history}" th:text="#{nav.history}">이력</a>
-		<a th:href="@{/report}" th:text="#{nav.report}">활동 리포트</a>
-		<a th:href="@{/simulator}" th:text="#{nav.simulator}">시뮬레이터(폰 대체)</a>
+		<a th:href="@{/dashboard}">
+			<svg class="nav-icon" width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+				<path d="M2 11h3l2-6 4 12 2.5-9 1.5 3h3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+			</svg>
+			<span th:text="#{nav.monitoring}">모니터링</span>
+		</a>
+		<a th:href="@{/subjects}">
+			<svg class="nav-icon" width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+				<path d="M3 5.5h1M3 10h1M3 14.5h1M7 5.5h10M7 10h10M7 14.5h7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+			</svg>
+			<span th:text="#{nav.subjects}">측정 대상</span>
+		</a>
+		<a th:href="@{/history}">
+			<svg class="nav-icon" width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+				<circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.7"/>
+				<path d="M10 6.2v4l3 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+			</svg>
+			<span th:text="#{nav.history}">이력</span>
+		</a>
+		<a th:href="@{/report}">
+			<svg class="nav-icon" width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+				<path d="M4 16.5V10M10 16.5V3.5M16 16.5V9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+			</svg>
+			<span th:text="#{nav.report}">활동 리포트</span>
+		</a>
+		<a th:href="@{/simulator}">
+			<svg class="nav-icon" width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+				<rect x="6" y="2" width="8" height="16" rx="2" stroke="currentColor" stroke-width="1.7"/>
+				<path d="M9 14.7h2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+			</svg>
+			<span th:text="#{nav.simulator}">시뮬레이터(폰 대체)</span>
+		</a>
 		<!-- 선택한 언어로 현재 페이지를 다시 요청한다(?lang=ko|en) - LocaleChangeInterceptor가
 		     이 파라미터를 보고 쿠키(LOCALE)를 갱신하므로, 이후 페이지 이동에서는 이 파라미터 없이도 유지된다. -->
 		<select class="lang-select" aria-label="language" onchange="location.href=(location.pathname + '?lang=' + this.value)">

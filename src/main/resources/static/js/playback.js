@@ -16,11 +16,11 @@
 	var ACCEL_WINDOW_SECONDS = 4;
 	var ACCEL_DEFAULT_SAMPLING_HZ = 50; // 가속도 기록이 하나도 없어 rate를 알 수 없을 때의 기본값
 	// 대시보드와 동일한 배색을 사용해, 어느 화면에서 보든 x/y/z 색이 항상 같게 유지한다.
-	var ACCEL_AXIS_COLORS = {x: "#3987e5", y: "#d95926", z: "#199e70"};
+	var ACCEL_AXIS_COLORS = {x: "#2f5d8f", y: "#a8481c", z: "#146b4f"};
 
 	// y축 고정 범위도 대시보드와 동일하게 유지한다 (auto-scale 대신 채널별 고정값을 사용).
 	// 참고한 모니터 UI처럼 ECG 파형은 임상 모니터에서 흔히 쓰는 초록색으로 그린다.
-	var ECG_COLOR = "#22c55e";
+	var ECG_COLOR = "#4CAF50";
 	var ECG_MIN = -1.0, ECG_MAX = 2.0;
 	// x/y/z를 하나의 차트에 겹쳐 그리므로 셋이 같은 축척(min/max)을 공유해야 흔들림 크기를 그대로
 	// 비교할 수 있다. z축만 중력(약 9.8) 성분이 실려 있어 그대로는 축이 다르므로, 그리기 직전에
@@ -224,6 +224,7 @@
 
 		init: function (subjectName) {
 			this.map = L.map("map").setView([37.5665, 126.9780], 15);
+			// 대시보드 지도와 동일하게 표준 OSM 타일 + CSS 필터(.leaflet-tile-pane)로 어둡게 한다.
 			L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
 				attribution: "&copy; OpenStreetMap contributors",
 				maxZoom: 19

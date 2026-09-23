@@ -21,7 +21,7 @@
 	var ACCEL_WINDOW_SECONDS = 4;
 	var ACCEL_DEFAULT_SAMPLING_HZ = 50; // samplingRateHz가 없을 때(비정상 메시지 등)의 안전한 기본값
 	// x/y/z를 시각적으로 항상 같은 색으로 구분하기 위한 고정 배색(카테고리컬 색상은 순서를 바꾸지 않는다).
-	var ACCEL_AXIS_COLORS = {x: "#3987e5", y: "#d95926", z: "#199e70"};
+	var ACCEL_AXIS_COLORS = {x: "#2f5d8f", y: "#a8481c", z: "#146b4f"};
 
 	// y축을 버퍼의 순간 min/max로 auto-scale하지 않고 채널별 고정 범위로 그린다.
 	// (auto-scale은 미세한 노이즈도 큰 변화처럼 보이게 만들고, 채널마다 스케일이 달라 비교가 어려움)
@@ -30,7 +30,7 @@
 	//   가속도 X/Y: 정확히 -0.3~0.3 (보행 흔들림) -> -1.5~1.5
 	//   가속도 Z: 9.6~10.0 (중력 9.8 근방) -> 8.5~11.1
 	// 참고한 모니터 UI처럼 ECG 파형은 임상 모니터에서 흔히 쓰는 초록색으로 그린다.
-	var ECG_COLOR = "#22c55e";
+	var ECG_COLOR = "#4CAF50";
 	var ECG_MIN = -1.0, ECG_MAX = 2.0;
 	// x/y/z를 하나의 차트에 겹쳐 그리므로 셋이 같은 축척(min/max)을 공유해야 흔들림 크기를 그대로
 	// 비교할 수 있다. z축만 중력(약 9.8) 성분이 실려 있어 그대로는 축이 다르므로, 그리기 직전에
@@ -47,6 +47,9 @@
 
 		init: function () {
 			this.map = L.map("map").setView(DEFAULT_CENTER, 12);
+			// 표준 OSM 타일 - 다크 톤 전용 타일(CARTO 등)은 API 키가 필요해져서 키 관리
+			// 없이 영구적으로 안정적인 이 방식을 쓴다. 어둡게 보이는 건 CSS 필터(.map-panel의
+			// .leaflet-tile-pane)가 담당하고, 마커/컨트롤은 그 필터 대상에서 제외해 그대로 보인다.
 			L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
 				attribution: "&copy; OpenStreetMap contributors",
 				maxZoom: 19
