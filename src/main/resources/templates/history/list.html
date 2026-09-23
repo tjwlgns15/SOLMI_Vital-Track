@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
 	<meta charset="UTF-8">
-	<title th:text="#{history.list.title}">측정 이력 - VitalTrack</title>
+	<title th:text="#{history.list.title}">측정 이력 - Vital Track</title>
 	<link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
@@ -16,6 +16,10 @@
 			<h2 th:text="#{history.list.sessionsHeading}">측정 세션 목록</h2>
 			<span class="text-muted text-sm" th:text="#{history.list.count(${#lists.size(sessions)})}">총 0건</span>
 		</div>
+		<div class="search-bar" th:if="${not #lists.isEmpty(sessions)}">
+			<input type="text" id="historySearchInput" class="search-input"
+				th:placeholder="#{history.list.search.placeholder}" placeholder="대상 이름으로 검색">
+		</div>
 		<table th:if="${not #lists.isEmpty(sessions)}">
 			<thead>
 			<tr>
@@ -28,7 +32,7 @@
 				<th></th>
 			</tr>
 			</thead>
-			<tbody>
+			<tbody id="historyTableBody">
 			<tr th:each="s : ${sessions}">
 				<td th:text="${s.subjectName}"></td>
 				<td>
@@ -48,8 +52,11 @@
 			</tr>
 			</tbody>
 		</table>
+		<p id="historySearchEmptyState" class="empty-state" style="display:none;"
+			th:if="${not #lists.isEmpty(sessions)}" th:text="#{history.list.search.empty}">검색 결과가 없습니다.</p>
 		<p th:if="${#lists.isEmpty(sessions)}" class="empty-state" th:text="#{history.list.empty}">아직 종료된 측정 세션이 없습니다.</p>
 	</div>
 </div>
+<script th:src="@{/js/history-list.js}"></script>
 </body>
 </html>

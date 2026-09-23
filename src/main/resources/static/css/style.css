@@ -360,7 +360,8 @@ h2 {
 }
 
 .form-group input,
-.form-group select {
+.form-group select,
+.search-input {
 	width: 100%;
 	padding: 10px 12px;
 	background: var(--color-bg);
@@ -372,20 +373,31 @@ h2 {
 	transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-.form-group input::placeholder {
+.form-group input::placeholder,
+.search-input::placeholder {
 	color: var(--color-text-faint);
 }
 
 .form-group input:hover,
-.form-group select:hover {
+.form-group select:hover,
+.search-input:hover {
 	border-color: #475569;
 }
 
 .form-group input:focus,
-.form-group select:focus {
+.form-group select:focus,
+.search-input:focus {
 	outline: none;
 	border-color: var(--color-primary);
 	box-shadow: var(--shadow-focus);
+}
+
+.search-bar {
+	margin-bottom: 16px;
+}
+
+.search-bar .search-input {
+	max-width: 320px;
 }
 
 select {
