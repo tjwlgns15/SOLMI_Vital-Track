@@ -7,11 +7,15 @@
 </head>
 <body>
 <div th:replace="~{fragments/nav :: nav}"></div>
-<div class="page">
+<div class="page page-table">
 	<h1 th:text="#{history.list.heading}">측정 이력</h1>
 	<p class="text-muted" th:text="#{history.list.description}">종료된 측정 세션 목록입니다. "재생"을 누르면 기록된 위치/ECG/가속도/속도를 그대로 재생해볼 수 있습니다.</p>
 
 	<div class="card">
+		<div class="card-header-row" th:if="${not #lists.isEmpty(sessions)}">
+			<h2 th:text="#{history.list.sessionsHeading}">측정 세션 목록</h2>
+			<span class="text-muted text-sm" th:text="#{history.list.count(${#lists.size(sessions)})}">총 0건</span>
+		</div>
 		<table th:if="${not #lists.isEmpty(sessions)}">
 			<thead>
 			<tr>

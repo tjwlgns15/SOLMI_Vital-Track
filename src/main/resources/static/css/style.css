@@ -125,8 +125,22 @@ a:hover {
 	font-size: 13px;
 }
 
-.page-narrow {
-	max-width: 420px;
+.page.page-narrow {
+	/* .page의 max-width:1100px과 동일한 특이도(단일 클래스)라서, 소스 순서에 기대지 않고
+	   .page.page-narrow처럼 두 클래스를 묶어 특이도를 높여 확실하게 덮어쓴다. */
+	max-width: 480px;
+	/* width:auto + margin:auto만으로는 이 요소가 flex(교차축 stretch) 대상이어도 카드 내용
+	   기준으로 좁게(약 300px) 줄어드는 문제가 있어, width:100%를 명시해 max-width(480px)
+	   한도까지 확실히 채운다. */
+	width: 100%;
+	/* 로그인/회원가입처럼 내비게이션 없이 폼 하나만 있는 페이지는 body(flex-column)의
+	   유일한 자식이므로, flex:1로 남은 뷰포트 높이를 전부 차지한 뒤 justify-content로
+	   .card를 화면 정중앙에 세로 정렬한다. 가로 중앙 정렬은 margin:0 auto + width/max-width로
+	   이 요소 자체가 담당한다. */
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
 }
 
 .stack-sm {
@@ -239,6 +253,7 @@ a:hover {
 
 .page {
 	max-width: 1100px;
+	width: 100%;
 	margin: 0 auto;
 	padding: 32px 24px 56px;
 }
@@ -260,6 +275,28 @@ a:hover {
 	min-height: 0;
 	display: flex;
 	flex-direction: column;
+}
+
+.page.page-table {
+	/* 표(subject/list, history/list)가 좁아 보이는 문제 - .page(1100px)보다 넓게 쓰되
+	   .page-wide(1900px, 지도/신호 패널 전용)만큼 과도하게 넓히지는 않는다. 특이도를 위해
+	   .page.page-table로 묶어 .page의 max-width를 확실히 덮어쓴다. */
+	max-width: 1440px;
+}
+
+/* 측정 대상 관리: 등록 폼(좌, 고정폭)과 목록(우, 가변폭)을 나란히 배치해 넓어진 페이지 폭을
+   실제로 활용한다. 폼 카드가 목록 카드보다 세로로 짧을 때 위쪽에 붙도록 align-items:start. */
+.subject-layout {
+	display: grid;
+	grid-template-columns: 380px 1fr;
+	gap: 24px;
+	align-items: start;
+}
+
+@media (max-width: 900px) {
+	.subject-layout {
+		grid-template-columns: 1fr;
+	}
 }
 
 .page > h1 {
@@ -294,6 +331,18 @@ h1 {
 h2 {
 	font-size: 18px;
 	font-weight: 600;
+}
+
+.card-header-row {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 16px;
+}
+
+.card-header-row h2 {
+	margin-bottom: 0;
 }
 
 /* ---------- 폼 ---------- */
@@ -481,7 +530,7 @@ table {
 
 th, td {
 	text-align: left;
-	padding: 12px;
+	padding: 14px 16px;
 	border-bottom: 1px solid var(--color-border-soft);
 	font-size: 14px;
 }
