@@ -7,7 +7,6 @@ import com.solmi.vitaltrack.measurement.history.AccelerationRecordRepository;
 import com.solmi.vitaltrack.measurement.realtime.AccelerationMessage;
 import com.solmi.vitaltrack.subject.Subject;
 import com.solmi.vitaltrack.subject.SubjectService;
-import com.solmi.vitaltrack.subject.SubjectType;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -45,9 +44,6 @@ public class DailyActivityReportService {
 
 	public DailyActivityReportResponse generate(Long subjectId, LocalDate date, Long memberId) {
 		Subject subject = subjectService.getOwnedSubject(subjectId, memberId);
-		if (subject.getType() != SubjectType.ANIMAL) {
-			throw new IllegalStateException("활동량 리포트는 동물 대상에만 제공됩니다");
-		}
 
 		LocalDateTime dayStart = date.atStartOfDay();
 		LocalDateTime dayEnd = dayStart.plusDays(1);

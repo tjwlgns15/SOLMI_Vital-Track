@@ -1,36 +1,22 @@
 /**
  * 측정 이력 재생 화면.
  * - PlaybackData: 서버에서 받은 기록을 시간순 타임라인으로 정리만 담당
- * - PlaybackView: 지도/ECG/가속도(x·y·z)/속도 렌더링만 담당
+ * - PlaybackView: 지도/ECG/가속도(x·y·z)/속도 렌더링만 담당 (파형은 대시보드와 같은 스윕 차트 - SweepChart)
  * - PlaybackPlayer: 재생/일시정지/배속/탐색(seek) 조율만 담당
  */
 (function () {
 	"use strict";
 
 	// ECG/가속도 둘 다 세션마다 실제 samplingRateHz가 다를 수 있어(가속도는 시뮬레이터 50Hz, 실제 앱
-	// 테스트 250Hz로 이미 확인됨), 버퍼를 "샘플 개수" 고정이 아니라 "몇 초를 보여줄지" 기준으로 잡는다.
-	// (대시보드 dashboard.js와 동일한 정책 - PlaybackData 생성 시 세션의 실제 samplingRateHz로
-	// ecgBufferSize/accelBufferSize를 한 번 계산해서 재생 내내 사용한다.)
-	var ECG_WINDOW_SECONDS = 4;
+	// 테스트 250Hz로 이미 확인됨), 차트를 "샘플 개수" 고정이 아니라 "몇 초를 보여줄지" 기준으로 잡는다.
+	// (대시보드 dashboard.js와 동일한 정책 - 세션의 실제 samplingRateHz로 차트를 한 번 만들어 재생 내내 사용한다.)
+	// 차트 y축 범위/배색은 대시보드와 공유하도록 SweepChart 프리셋(sweep-chart.js)에 있다.
+	var ECG_WINDOW_SECONDS = 10;
 	var ECG_DEFAULT_SAMPLING_HZ = 250; // ECG 기록이 하나도 없어 rate를 알 수 없을 때의 기본값
-	var ACCEL_WINDOW_SECONDS = 4;
+	var ACCEL_WINDOW_SECONDS = 10;
 	var ACCEL_DEFAULT_SAMPLING_HZ = 50; // 가속도 기록이 하나도 없어 rate를 알 수 없을 때의 기본값
-	// 대시보드와 동일한 배색을 사용해, 어느 화면에서 보든 x/y/z 색이 항상 같게 유지한다.
-	var ACCEL_AXIS_COLORS = {x: "#2f5d8f", y: "#a8481c", z: "#146b4f"};
-
-	// y축 고정 범위도 대시보드와 동일하게 유지한다 (auto-scale 대신 채널별 고정값을 사용).
-	// 참고한 모니터 UI처럼 ECG 파형은 임상 모니터에서 흔히 쓰는 초록색으로 그린다.
-	var ECG_COLOR = "#4CAF50";
-	var ECG_MIN = -1.0, ECG_MAX = 2.0;
-	// x/y/z를 하나의 차트에 겹쳐 그리므로 셋이 같은 축척(min/max)을 공유해야 흔들림 크기를 그대로
-	// 비교할 수 있다. z축만 중력(약 9.8) 성분이 실려 있어 그대로는 축이 다르므로, 그리기 직전에
-	// ACCEL_Z_BASELINE만큼 빼서 x/y와 같은 "0 근방 흔들림" 값으로 맞춘 뒤 같은 범위로 정규화한다
-	// (대시보드 dashboard.js와 동일한 정책).
-	var ACCEL_MIN = -2, ACCEL_MAX = 2;
-	var ACCEL_Z_BASELINE = 9.8;
-	// 세 선이 완전히 겹치지 않도록 세로로 살짝 어긋나게(offset) 그린다 (색상 구분은 그대로 유지).
-	var ACCEL_LANE_OFFSET_PX = 13;
-	var TICK_MS = 100;
+	// 스윕 차트의 프레임 속도(25fps)에 맞춰 재생 시점을 갱신한다.
+	var TICK_MS = 40;
 
 	function formatTime(ms) {
 		var totalSec = Math.floor(ms / 1000);
@@ -40,88 +26,53 @@
 	}
 
 	/**
-	 * 버퍼를 정규화해 canvas에 선 그래프로 그린다. ECG/가속도 x/y/z 차트가 공통으로 사용한다.
-	 * min/max는 버퍼에서 그때그때 계산하지 않고 채널별 고정값을 받는다 (auto-scale 방지).
+	 * 1초 단위 묶음(batch)으로 기록된 파형(ECG/가속도)을 "샘플 단위" 타임라인으로 다룬다.
+	 * 묶음 안의 샘플도 samplingRateHz에 맞춰 시간순으로 조금씩 드러나게 해서, 재생 중 파형이
+	 * 묶음 단위로 뚝뚝 끊기지 않고 실시간 대시보드처럼 부드럽게 스윕되게 한다.
 	 */
-	function drawLineChart(canvas, buffer, bufferSize, color, min, max) {
-		var ctx = canvas.getContext("2d");
-		var w = canvas.width;
-		var h = canvas.height;
-		ctx.clearRect(0, 0, w, h);
-		if (buffer.length < 2) {
-			return;
+	function SampleTimeline(batches, samplingRateHz) {
+		this.batches = batches;
+		this.samplingRateHz = samplingRateHz;
+		// startIndex[k] = k번째 묶음 첫 샘플의 절대 번호 (세션 시작부터 몇 번째 샘플인지)
+		this.startIndex = [];
+		var total = 0;
+		for (var k = 0; k < batches.length; k++) {
+			this.startIndex.push(total);
+			total += batches[k].samples.length;
 		}
-		var range = (max - min) || 1;
-		var step = w / (bufferSize - 1);
-		var offset = bufferSize - buffer.length;
-
-		ctx.strokeStyle = color;
-		ctx.lineWidth = 1.5;
-		ctx.beginPath();
-		for (var i = 0; i < buffer.length; i++) {
-			var x = (offset + i) * step;
-			var normalized = (buffer[i] - min) / range;
-			var y = h - normalized * (h - 10) - 5;
-			if (i === 0) {
-				ctx.moveTo(x, y);
-			} else {
-				ctx.lineTo(x, y);
-			}
-		}
-		ctx.stroke();
 	}
 
 	/**
-	 * 가속도 x/y/z를 한 캔버스에 겹쳐 그린다. 세 축이 같은 min/max(ACCEL_MIN~ACCEL_MAX)를
-	 * 공유해서 흔들림 크기를 그대로 비교할 수 있게 하되, 완전히 겹치지 않도록 축마다 픽셀
-	 * 단위로 살짝 어긋나게(offset) 그린다. z축은 중력 성분(ACCEL_Z_BASELINE)을 먼저 빼서
-	 * x/y와 같은 "0 근방 흔들림" 값으로 맞춘 뒤 그린다 (대시보드 dashboard.js와 동일한 로직).
+	 * timeMs 시점까지 드러난 샘플 중 최근 maxCount개와, 그 다음 샘플의 절대 번호(endIndex)를 반환한다.
+	 * 스윕 차트는 endIndex로 현재 그리는 위치를 정하므로, 탐색(seek)해도 같은 모습으로 그려진다.
 	 */
-	function drawAccelChart(canvas, bufferX, bufferY, bufferZ, bufferSize) {
-		var ctx = canvas.getContext("2d");
-		ctx.clearRect(0, 0, canvas.width, canvas.height);
-		drawAccelLine(ctx, canvas, bufferX, bufferSize, ACCEL_AXIS_COLORS.x, -ACCEL_LANE_OFFSET_PX, 0);
-		drawAccelLine(ctx, canvas, bufferY, bufferSize, ACCEL_AXIS_COLORS.y, 0, 0);
-		drawAccelLine(ctx, canvas, bufferZ, bufferSize, ACCEL_AXIS_COLORS.z, ACCEL_LANE_OFFSET_PX, ACCEL_Z_BASELINE);
-	}
-
-	function drawAccelLine(ctx, canvas, buffer, bufferSize, color, pixelOffset, valueBaseline) {
-		if (buffer.length < 2) {
-			return;
-		}
-		var w = canvas.width;
-		var h = canvas.height;
-		var range = (ACCEL_MAX - ACCEL_MIN) || 1;
-		var step = w / (bufferSize - 1);
-		var offset = bufferSize - buffer.length;
-
-		ctx.strokeStyle = color;
-		ctx.lineWidth = 1.5;
-		ctx.beginPath();
-		for (var i = 0; i < buffer.length; i++) {
-			var x = (offset + i) * step;
-			var normalized = ((buffer[i] - valueBaseline) - ACCEL_MIN) / range;
-			var y = h - normalized * (h - 10) - 5 + pixelOffset;
-			if (i === 0) {
-				ctx.moveTo(x, y);
-			} else {
-				ctx.lineTo(x, y);
+	SampleTimeline.prototype.upTo = function (timeMs, maxCount) {
+		var last = -1;
+		for (var k = 0; k < this.batches.length; k++) {
+			if (this.batches[k].offsetMs > timeMs) {
+				break;
 			}
+			last = k;
 		}
-		ctx.stroke();
-	}
+		if (last < 0) {
+			return {samples: [], endIndex: 0};
+		}
+		var lastBatch = this.batches[last];
+		var revealed = Math.min(lastBatch.samples.length,
+				Math.floor((timeMs - lastBatch.offsetMs) * this.samplingRateHz / 1000) + 1);
 
-	function pluckX(sample) {
-		return sample.x;
-	}
-
-	function pluckY(sample) {
-		return sample.y;
-	}
-
-	function pluckZ(sample) {
-		return sample.z;
-	}
+		var chunks = [lastBatch.samples.slice(0, revealed)];
+		var count = revealed;
+		for (var b = last - 1; b >= 0 && count < maxCount; b--) {
+			chunks.unshift(this.batches[b].samples);
+			count += this.batches[b].samples.length;
+		}
+		var samples = [].concat.apply([], chunks);
+		if (samples.length > maxCount) {
+			samples = samples.slice(samples.length - maxCount);
+		}
+		return {samples: samples, endIndex: this.startIndex[last] + revealed};
+	};
 
 	/** 서버 응답을 재생하기 쉬운 형태로만 가공한다 */
 	function PlaybackData(raw) {
@@ -132,16 +83,16 @@
 		this.velocities = raw.velocities.slice().sort(byOffset);
 
 		// ECG/가속도 배치들의 samplingRateHz는 한 세션 안에서 항상 같다고 가정하고(같은 기기가 보낸 기록),
-		// 첫 배치의 값으로 버퍼 크기를 한 번만 계산해 재생 내내 사용한다.
-		var ecgSamplingRateHz = this.ecgBatches.length > 0
-			? this.ecgBatches[0].samplingRateHz
-			: ECG_DEFAULT_SAMPLING_HZ;
-		this.ecgBufferSize = Math.round((ecgSamplingRateHz || ECG_DEFAULT_SAMPLING_HZ) * ECG_WINDOW_SECONDS);
+		// 첫 배치의 값으로 차트 크기를 한 번만 정해 재생 내내 사용한다.
+		this.ecgSamplingRateHz = (this.ecgBatches.length > 0 && this.ecgBatches[0].samplingRateHz)
+			|| ECG_DEFAULT_SAMPLING_HZ;
+		this.ecgWindowSize = Math.round(this.ecgSamplingRateHz * ECG_WINDOW_SECONDS);
+		this.ecgTimeline = new SampleTimeline(this.ecgBatches, this.ecgSamplingRateHz);
 
-		var accelSamplingRateHz = this.accelerations.length > 0
-			? this.accelerations[0].samplingRateHz
-			: ACCEL_DEFAULT_SAMPLING_HZ;
-		this.accelBufferSize = Math.round((accelSamplingRateHz || ACCEL_DEFAULT_SAMPLING_HZ) * ACCEL_WINDOW_SECONDS);
+		this.accelSamplingRateHz = (this.accelerations.length > 0 && this.accelerations[0].samplingRateHz)
+			|| ACCEL_DEFAULT_SAMPLING_HZ;
+		this.accelWindowSize = Math.round(this.accelSamplingRateHz * ACCEL_WINDOW_SECONDS);
+		this.accelTimeline = new SampleTimeline(this.accelerations, this.accelSamplingRateHz);
 
 		var last = 0;
 		[this.locations, this.ecgBatches, this.accelerations, this.velocities].forEach(function (list) {
@@ -156,64 +107,44 @@
 		return a.offsetMs - b.offsetMs;
 	}
 
-	/** 특정 시점(timeMs)까지의 상태(마커 위치, 가속도 x/y/z 버퍼, 속도, ECG 버퍼)를 계산한다 */
+	function latestUpTo(list, timeMs) {
+		var latest = null;
+		for (var i = 0; i < list.length; i++) {
+			if (list[i].offsetMs > timeMs) {
+				break;
+			}
+			latest = list[i];
+		}
+		return latest;
+	}
+
+	/** 특정 시점(timeMs)까지의 상태(마커 위치, 속도, 최근 ECG/가속도 샘플과 절대 샘플 번호)를 계산한다 */
 	PlaybackData.prototype.stateAt = function (timeMs) {
-		var lastLocation = null;
-		for (var i = 0; i < this.locations.length; i++) {
-			if (this.locations[i].offsetMs > timeMs) {
-				break;
-			}
-			lastLocation = this.locations[i];
-		}
-
-		var accelBufferX = [];
-		var accelBufferY = [];
-		var accelBufferZ = [];
-		for (var a = 0; a < this.accelerations.length; a++) {
-			if (this.accelerations[a].offsetMs > timeMs) {
-				break;
-			}
-			var samples = this.accelerations[a].samples;
-			accelBufferX = accelBufferX.concat(samples.map(pluckX));
-			accelBufferY = accelBufferY.concat(samples.map(pluckY));
-			accelBufferZ = accelBufferZ.concat(samples.map(pluckZ));
-		}
-		if (accelBufferX.length > this.accelBufferSize) {
-			accelBufferX = accelBufferX.slice(accelBufferX.length - this.accelBufferSize);
-			accelBufferY = accelBufferY.slice(accelBufferY.length - this.accelBufferSize);
-			accelBufferZ = accelBufferZ.slice(accelBufferZ.length - this.accelBufferSize);
-		}
-
-		var lastVelocity = null;
-		for (var v = 0; v < this.velocities.length; v++) {
-			if (this.velocities[v].offsetMs > timeMs) {
-				break;
-			}
-			lastVelocity = this.velocities[v];
-		}
-
-		var ecgBuffer = [];
-		for (var e = 0; e < this.ecgBatches.length; e++) {
-			if (this.ecgBatches[e].offsetMs > timeMs) {
-				break;
-			}
-			ecgBuffer = ecgBuffer.concat(this.ecgBatches[e].samples);
-		}
-		if (ecgBuffer.length > this.ecgBufferSize) {
-			ecgBuffer = ecgBuffer.slice(ecgBuffer.length - this.ecgBufferSize);
-		}
-
 		return {
-			location: lastLocation,
-			accelBufferX: accelBufferX,
-			accelBufferY: accelBufferY,
-			accelBufferZ: accelBufferZ,
-			accelBufferSize: this.accelBufferSize,
-			velocity: lastVelocity,
-			ecgBuffer: ecgBuffer,
-			ecgBufferSize: this.ecgBufferSize
+			location: latestUpTo(this.locations, timeMs),
+			velocity: latestUpTo(this.velocities, timeMs),
+			ecg: this.ecgTimeline.upTo(timeMs, this.ecgWindowSize),
+			ecgSamplingRateHz: this.ecgSamplingRateHz,
+			accel: this.accelTimeline.upTo(timeMs, this.accelWindowSize)
 		};
 	};
+
+	/**
+	 * 대상별 색상(session.subjectColor, 서버의 SubjectColors가 결정)으로 채운 핀 모양 마커 아이콘.
+	 * 대시보드/이력 목록과 같은 색을 써서 어느 화면에서 보든 같은 대상은 같은 색으로 보이게 한다.
+	 */
+	function subjectMarkerIcon(color) {
+		return L.divIcon({
+			className: "subject-marker",
+			html: '<svg width="24" height="36" viewBox="0 0 24 36">' +
+				'<path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z" ' +
+				'fill="' + color + '" stroke="rgba(0,0,0,0.45)" stroke-width="1"/>' +
+				'<circle cx="12" cy="12" r="4.5" fill="#ffffff"/></svg>',
+			iconSize: [24, 36],
+			iconAnchor: [12, 36],
+			popupAnchor: [0, -32]
+		});
+	}
 
 	/** 지도/ECG/가속도(x·y·z)/속도 화면 렌더링만 담당 */
 	var PlaybackView = {
@@ -222,7 +153,7 @@
 		path: null,
 		pathPoints: [],
 
-		init: function (subjectName) {
+		init: function (subjectName, subjectColor, data) {
 			this.map = L.map("map").setView([37.5665, 126.9780], 15);
 			// 대시보드 지도와 동일하게 표준 OSM 타일 + CSS 필터(.leaflet-tile-pane)로 어둡게 한다.
 			L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -230,8 +161,11 @@
 				maxZoom: 19
 			}).addTo(this.map);
 			this.subjectName = subjectName;
-			this.ecgCanvas = document.getElementById("ecg-canvas");
-			this.accelCanvas = document.getElementById("accel-canvas");
+			this.subjectColor = subjectColor;
+			this.ecgChart = SweepChart.ecg(
+					document.getElementById("ecg-chart"), data.ecgSamplingRateHz, ECG_WINDOW_SECONDS);
+			this.accelChart = SweepChart.acceleration(
+					document.getElementById("accel-chart"), data.accelSamplingRateHz, ACCEL_WINDOW_SECONDS);
 		},
 
 		drawFullPath: function (locations) {
@@ -241,7 +175,7 @@
 			var latlngs = locations.map(function (l) {
 				return [l.latitude, l.longitude];
 			});
-			L.polyline(latlngs, {color: "#38bdf8", weight: 2, opacity: 0.4}).addTo(this.map);
+			L.polyline(latlngs, {color: this.subjectColor, weight: 2, opacity: 0.5}).addTo(this.map);
 			this.map.fitBounds(latlngs, {padding: [30, 30]});
 		},
 
@@ -249,21 +183,24 @@
 			if (state.location) {
 				var pos = [state.location.latitude, state.location.longitude];
 				if (!this.marker) {
-					this.marker = L.marker(pos).addTo(this.map).bindPopup(this.subjectName);
+					this.marker = L.marker(pos, {icon: subjectMarkerIcon(this.subjectColor)}).addTo(this.map).bindPopup(this.subjectName);
 				} else {
 					this.marker.setLatLng(pos);
 				}
-				document.querySelector(".loc-status").textContent = MESSAGES.playing;
+				document.querySelector(".loc-status").textContent =
+					VitalsFormat.coordinates(state.location.latitude, state.location.longitude);
 			}
 
-			drawAccelChart(this.accelCanvas, state.accelBufferX, state.accelBufferY, state.accelBufferZ, state.accelBufferSize);
+			this.accelChart.renderUpTo(state.accel.samples.map(SweepChart.toAccelRow), state.accel.endIndex);
 
 			if (state.velocity) {
 				document.querySelector(".velocity-value").textContent = state.velocity.speed.toFixed(2) + " km/h";
 			}
 
-			document.querySelector(".ecg-status").textContent = state.ecgBuffer.length > 0 ? MESSAGES.playing : "-";
-			drawLineChart(this.ecgCanvas, state.ecgBuffer, state.ecgBufferSize, ECG_COLOR, ECG_MIN, ECG_MAX);
+			// 대시보드와 같은 방식으로, 재생 시점까지의 최근 ECG 버퍼에서 R파 간격으로 심박수를 추정한다.
+			var bpm = VitalsFormat.heartRateBpm(state.ecg.samples, state.ecgSamplingRateHz);
+			document.querySelector(".ecg-status").textContent = bpm != null ? bpm + " bpm" : "-";
+			this.ecgChart.renderUpTo(state.ecg.samples.map(SweepChart.toEcgRow), state.ecg.endIndex);
 		}
 	};
 
@@ -352,11 +289,11 @@
 			.then(function (raw) {
 				var data = new PlaybackData(raw);
 				document.getElementById("subject-title").textContent =
-					raw.session.subjectName + " (" + raw.session.subjectTypeLabel + ")";
+					raw.session.subjectName + " (" + raw.session.subjectSpecies + ")";
 				document.getElementById("session-time").textContent =
 					raw.session.startedAt + " ~ " + (raw.session.endedAt || "-");
 
-				PlaybackView.init(raw.session.subjectName);
+				PlaybackView.init(raw.session.subjectName, raw.session.subjectColor, data);
 				PlaybackView.drawFullPath(data.locations);
 				PlaybackPlayer.init(data);
 			})

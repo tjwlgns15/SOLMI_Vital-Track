@@ -1,11 +1,11 @@
 # VitalTrack
 
-측정 대상(사람 또는 동물)의 위치와 생체/움직임 신호(심전도, 가속도, 속도)를 실시간으로 웹에서 모니터링하는 Spring Boot + JPA 프로젝트입니다.
+측정 대상(동물)의 위치와 생체/움직임 신호(심전도, 가속도, 속도)를 실시간으로 웹에서 모니터링하는 Spring Boot + JPA 프로젝트입니다.
 
 ## 이번 산출물의 범위 (MVP)
 
 - 계정 생성/로그인
-- 측정 대상 등록(사람/동물)
+- 측정 대상(동물) 등록 — 이름과 품종 필수
 - **웹 기반 시뮬레이터**로 실제 웨어러블 디바이스 + 스마트폰 앱 역할을 대신함 (측정 대상 선택 → 측정 시작 → 가짜 GPS/ECG/가속도/속도 데이터를 주기적으로 생성해 서버로 전송)
 - 여러 측정 대상을 동시에 볼 수 있는 실시간 모니터링 대시보드 (좌: 지도, 우: 대상별 신호 패널)
 - **측정 이력 저장 및 재생**: 세션이 진행되는 동안 수신한 위치/ECG/가속도/속도를 모두 DB에 기록하고, 종료된 세션을 목록에서 골라 배속(1~8배)·탐색(seek)까지 가능한 형태로 재생
@@ -45,7 +45,7 @@
 ## 동작 확인 순서 (End-to-End 시나리오)
 
 1. `/signup` 에서 계정 생성 후 로그인
-2. `/subjects` 에서 측정 대상 등록 (예: "홍길동" - 사람, "초코" - 동물/강아지)
+2. `/subjects` 에서 측정 대상 등록 (예: "초코" - 골든리트리버)
 3. 브라우저 탭을 하나 더 열어 같은 계정으로 로그인 후 `/simulator` 접속
 4. 시뮬레이터에서 대상을 선택하고 "측정 시작" 클릭 → 가짜 위치/ECG/가속도/속도 데이터가 주기적으로 전송 시작
 5. 원래 탭에서 `/dashboard` 접속 → 좌측 지도에 해당 대상의 위치 마커가 나타나고, 우측 카드에 실시간 ECG 파형과 가속도/속도가 갱신되는지 확인
@@ -82,7 +82,7 @@ com.solmi.vitaltrack
 ├── common            공통 (BaseTimeEntity - 생성/수정시각 Auditing)
 ├── member            계정 도메인 (Member, MemberPrincipal, Spring Security 연동)
 ├── auth              앱용 JWT 인증 (AuthApiController, JwtTokenProvider, RefreshToken, JwtAuthenticationFilter, StompAuthChannelInterceptor)
-├── subject           측정 대상 등록/조회 (Subject, SubjectType)
+├── subject           측정 대상 등록/조회 (Subject, SubjectColors)
 ├── measurement        측정 세션 생명주기 (MeasurementSession)
 │   ├── realtime       실시간 데이터 수신/중계 (WebSocket 메시지, STOMP 컨트롤러, MeasurementIngestService)
 │   └── history        측정 이력 저장/조회 (LocationRecord/EcgSampleRecord/AccelerationRecord/VelocityRecord, 재생용 API)

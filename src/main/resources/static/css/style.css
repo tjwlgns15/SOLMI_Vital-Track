@@ -579,14 +579,22 @@ tbody tr:last-child td {
 	color: var(--color-text-muted);
 }
 
-.badge-human {
-	background: rgba(56, 189, 248, 0.15);
-	color: var(--color-primary);
+/* 대상별 색상은 서버(SubjectColors)가 정해 --subject-color로 내려준다. 지도 마커도 같은 색을 쓴다. */
+.badge-animal {
+	--subject-color: #fbbf24;
+	background: color-mix(in srgb, var(--subject-color) 15%, transparent);
+	color: var(--subject-color);
 }
 
-.badge-animal {
-	background: rgba(251, 191, 36, 0.15);
-	color: #fbbf24;
+/* ---------- 지도: 대상별 색상 위치 마커 (L.divIcon) ---------- */
+.subject-marker {
+	background: none;
+	border: none;
+}
+
+.subject-marker svg {
+	display: block;
+	filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
 }
 
 .badge-timeout {
@@ -790,6 +798,8 @@ tbody tr:last-child td {
 	font-size: 13px;
 	margin-top: 1px;
 	white-space: nowrap;
+	/* 심박수/좌표가 매초 갱신될 때 숫자 폭이 달라 칸이 흔들리지 않도록 고정폭 숫자를 쓴다. */
+	font-variant-numeric: tabular-nums;
 }
 
 /* 동물(ANIMAL) 대상 카드에만 표시되는 활동 수준 배지 - 정지/보행/활발한 움직임 */
@@ -841,17 +851,13 @@ tbody tr:last-child td {
 	font-weight: 600;
 }
 
-/* ECG/가속도 캔버스를 감싸는 계측기 느낌의 그리드 배경 (참고한 모니터 UI처럼 어둡고
-   중립적인 톤 - 그리드 색도 특정 신호 색상에 치우치지 않게 회색조로 통일한다). 모서리도
-   각지게(radius 없음) 해서 계측 장비의 화면 같은 인상을 준다. */
-.ecg-canvas,
-.accel-canvas {
+/* ECG/가속도 스윕 차트(ECharts) 컨테이너 - 참고한 모니터 UI처럼 어둡고 중립적인 배경.
+   격자(0.2초 간격)는 차트가 샘플 위치에 맞춰 직접 그리므로 CSS 배경 격자는 쓰지 않는다.
+   모서리도 각지게(radius 없음) 해서 계측 장비의 화면 같은 인상을 준다. */
+.ecg-chart,
+.accel-chart {
 	width: 100%;
 	background-color: #060b16;
-	background-image:
-		linear-gradient(#1a1a1a 1px, transparent 1px),
-		linear-gradient(90deg, #1a1a1a 1px, transparent 1px);
-	background-size: 20px 20px;
 	border: 1px solid var(--color-border-soft);
 	border-radius: 0;
 	display: block;
@@ -859,7 +865,7 @@ tbody tr:last-child td {
 
 /* 가속도 x/y/z를 하나의 차트에 겹쳐 그리되, 세 선을 살짝 어긋나게(offset) 그려 구분한다.
    축척은 셋이 공유(같은 min/max)하므로 색상 구분과 별개로 상대적인 흔들림 크기도 그대로 비교할 수 있다.
-   (실제 그리기는 js의 drawAccelChart가 담당 - X/Y/Z 세로 위치만 살짝 어긋난다) */
+   (실제 그리기는 sweep-chart.js의 SweepChart.acceleration이 담당 - X/Y/Z 세로 위치만 살짝 어긋난다) */
 .accel-panel {
 	margin-top: 6px;
 	/* X/Y/Z 범례를 캔버스 좌측 하단 안쪽에 겹쳐 띄우기 위한 기준 컨테이너. */
@@ -867,7 +873,7 @@ tbody tr:last-child td {
 }
 
 /* 더 이상 캔버스 위에 자기 줄을 차지하지 않고, 캔버스 좌측 하단 안쪽에 겹쳐(overlay) 떠 있다 -
-   그만큼 accel-canvas가 세로로 더 커진다. 어두운 반투명 배경을 깔아 캔버스의 격자 배경 위에서도
+   그만큼 accel-chart가 세로로 더 커진다. 어두운 반투명 배경을 깔아 차트의 격자 위에서도
    잘 보이게 한다. */
 .accel-legend {
 	position: absolute;
@@ -899,7 +905,7 @@ tbody tr:last-child td {
 }
 
 .accel-axis-y {
-	color: #a8481c;
+	color: #703013;
 	background: rgba(168, 72, 28, 0.18);
 }
 
@@ -911,7 +917,7 @@ tbody tr:last-child td {
 /* 대시보드(격자 모드) - 카드 높이는 항상 패널의 1/3로 고정이므로, ECG/가속도 차트도
    인원수와 무관하게 그 고정된 카드 높이 안에서 남는 세로 공간을 헤더/활력징후를 뺀 만큼
    flex로 나눠 채운다. */
-.dashboard-panel .ecg-canvas {
+.dashboard-panel .ecg-chart {
 	flex: 1;
 	min-height: 0;
 }
@@ -923,18 +929,18 @@ tbody tr:last-child td {
 	flex-direction: column;
 }
 
-.dashboard-panel .accel-panel .accel-canvas {
+.dashboard-panel .accel-panel .accel-chart {
 	flex: 1;
 	min-height: 0;
 }
 
 /* 재생(playback) 화면 - 카드가 하나뿐이라 격자로 나눌 필요가 없으므로 고정 높이를 쓴다.
    여백이 넉넉해진 만큼(페이지 폭 확장) 대시보드보다 조금 더 크게 보여준다. */
-#ecg-canvas {
+#ecg-chart {
 	height: 140px;
 }
 
-#accel-canvas {
+#accel-chart {
 	height: 110px;
 }
 

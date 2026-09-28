@@ -14,19 +14,18 @@ public class SubjectService {
 
 	private final SubjectRepository subjectRepository;
 	private final MemberRepository memberRepository;
-	private final SubjectTypeLabels subjectTypeLabels;
 
 	@Transactional
 	public Long register(Long memberId, SubjectRegisterRequest request) {
 		Member owner = getMember(memberId);
-		Subject subject = Subject.register(owner, request.name(), request.type(), request.species());
+		Subject subject = Subject.register(owner, request.name(), request.species());
 		return subjectRepository.save(subject).getId();
 	}
 
 	public List<SubjectResponse> findMySubjects(Long memberId) {
 		Member owner = getMember(memberId);
 		return subjectRepository.findByOwnerOrderByCreatedAtDesc(owner).stream()
-				.map(subject -> SubjectResponse.from(subject, subjectTypeLabels))
+				.map(subject -> SubjectResponse.from(subject))
 				.toList();
 	}
 

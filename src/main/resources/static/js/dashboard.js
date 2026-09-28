@@ -1,7 +1,8 @@
 /**
  * 실시간 모니터링 대시보드.
  * - 지도(Leaflet): 활성 세션이 있는 대상의 위치 마커를 실시간 갱신
- * - 신호 패널: 대상별 카드에 최근 ECG 파형, 가속도 x/y/z 파형(각각 별도 차트), 속도를 실시간 갱신
+ * - 신호 패널: 대상별 카드에 최근 ECG 파형, 가속도 x/y/z 파형, 속도를 실시간 갱신
+ *   (파형은 환자 모니터처럼 제자리에서 스윕되며 그려진다 - SweepChart)
  * - 접속해 있는 동안 새로 측정이 시작된 대상은 카드가 나타나고, 종료된 대상은 카드가 사라진다
  *   (세션 생명주기 알림을 /topic/members/{memberId}/sessions/started·ended로 구독)
  *
@@ -13,32 +14,30 @@
 	var DEFAULT_CENTER = [37.5665, 126.9780]; // 서울 시청 기준 기본 좌표
 	var STALE_MS = 6000; // 이 시간 동안 데이터가 없으면 오프라인으로 표시
 	// ECG/가속도 둘 다 실제로 들어오는 samplingRateHz가 환경마다 다를 수 있어(가속도는 시뮬레이터 50Hz,
-	// 실제 앱 테스트 250Hz로 이미 확인됨), 버퍼를 "샘플 개수" 고정이 아니라 "몇 초를 보여줄지" 기준으로
-	// 잡고, 실제 samplingRateHz를 받을 때마다 버퍼 크기를 그때그때 계산한다 (아래 onEcg/onAcceleration).
-	// 이렇게 하면 rate가 얼마로 들어오든 차트가 항상 같은 시간 길이를 보여준다.
-	var ECG_WINDOW_SECONDS = 4;
+	// 실제 앱 테스트 250Hz로 이미 확인됨), 차트는 "샘플 개수" 고정이 아니라 "몇 초를 보여줄지" 기준으로
+	// 잡고, 실제 samplingRateHz가 달라지면 차트 버퍼를 그 속도에 맞춰 다시 만든다 (SweepChart.ensureSamplingRate).
+	// 차트 y축 범위/배색은 재생 화면과 공유하도록 SweepChart 프리셋(sweep-chart.js)에 있다.
+	var ECG_WINDOW_SECONDS = 10;
 	var ECG_DEFAULT_SAMPLING_HZ = 250; // samplingRateHz가 없을 때(비정상 메시지 등)의 안전한 기본값
-	var ACCEL_WINDOW_SECONDS = 4;
+	var ACCEL_WINDOW_SECONDS = 10;
 	var ACCEL_DEFAULT_SAMPLING_HZ = 50; // samplingRateHz가 없을 때(비정상 메시지 등)의 안전한 기본값
-	// x/y/z를 시각적으로 항상 같은 색으로 구분하기 위한 고정 배색(카테고리컬 색상은 순서를 바꾸지 않는다).
-	var ACCEL_AXIS_COLORS = {x: "#2f5d8f", y: "#a8481c", z: "#146b4f"};
 
-	// y축을 버퍼의 순간 min/max로 auto-scale하지 않고 채널별 고정 범위로 그린다.
-	// (auto-scale은 미세한 노이즈도 큰 변화처럼 보이게 만들고, 채널마다 스케일이 달라 비교가 어려움)
-	// 시뮬레이터가 실제로 생성하는 값 범위에 여유를 둔 값:
-	//   ECG: 대략 -0.28~1.02 (R파 피크 ~1.0) -> -1.0~2.0
-	//   가속도 X/Y: 정확히 -0.3~0.3 (보행 흔들림) -> -1.5~1.5
-	//   가속도 Z: 9.6~10.0 (중력 9.8 근방) -> 8.5~11.1
-	// 참고한 모니터 UI처럼 ECG 파형은 임상 모니터에서 흔히 쓰는 초록색으로 그린다.
-	var ECG_COLOR = "#4CAF50";
-	var ECG_MIN = -1.0, ECG_MAX = 2.0;
-	// x/y/z를 하나의 차트에 겹쳐 그리므로 셋이 같은 축척(min/max)을 공유해야 흔들림 크기를 그대로
-	// 비교할 수 있다. z축만 중력(약 9.8) 성분이 실려 있어 그대로는 축이 다르므로, 그리기 직전에
-	// ACCEL_Z_BASELINE만큼 빼서 x/y와 같은 "0 근방 흔들림" 값으로 맞춘 뒤 같은 범위로 정규화한다.
-	var ACCEL_MIN = -2, ACCEL_MAX = 2;
-	var ACCEL_Z_BASELINE = 9.8;
-	// 세 선이 완전히 겹치지 않도록 세로로 살짝 어긋나게(offset) 그린다 (색상 구분은 그대로 유지).
-	var ACCEL_LANE_OFFSET_PX = 13;
+	/**
+	 * 대상별 색상(subject.color, 서버의 SubjectColors가 결정)으로 채운 핀 모양 마커 아이콘.
+	 * 카드의 품종 뱃지와 같은 색을 써서 지도 위 마커가 어느 카드의 대상인지 바로 구분되게 한다.
+	 */
+	function subjectMarkerIcon(color) {
+		return L.divIcon({
+			className: "subject-marker",
+			html: '<svg width="24" height="36" viewBox="0 0 24 36">' +
+				'<path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z" ' +
+				'fill="' + color + '" stroke="rgba(0,0,0,0.45)" stroke-width="1"/>' +
+				'<circle cx="12" cy="12" r="4.5" fill="#ffffff"/></svg>',
+			iconSize: [24, 36],
+			iconAnchor: [12, 36],
+			popupAnchor: [0, -32]
+		});
+	}
 
 	/** 지도 렌더링만 담당 */
 	var MapView = {
@@ -56,10 +55,10 @@
 			}).addTo(this.map);
 		},
 
-		upsertMarker: function (subjectId, name, lat, lng) {
+		upsertMarker: function (subjectId, name, color, lat, lng) {
 			var marker = this.markers[subjectId];
 			if (!marker) {
-				marker = L.marker([lat, lng]).addTo(this.map).bindPopup(name);
+				marker = L.marker([lat, lng], {icon: subjectMarkerIcon(color)}).addTo(this.map).bindPopup(name);
 				this.markers[subjectId] = marker;
 			} else {
 				marker.setLatLng([lat, lng]);
@@ -88,7 +87,7 @@
 
 	/**
 	 * 버퍼(배열)에 새 값을 이어붙이고 최대 길이를 넘으면 오래된 값부터 잘라낸다.
-	 * ECG 파형과 가속도 x/y/z 파형이 동일한 "최근 N개만 유지" 규칙을 쓰므로 공용 함수로 뺐다.
+	 * 심박수 계산용 최근 ECG 버퍼를 "최근 N개만 유지"하는 데 쓴다.
 	 */
 	function appendAndTrim(buffer, values, maxSize) {
 		var merged = buffer.concat(values);
@@ -98,102 +97,15 @@
 		return merged;
 	}
 
-	/**
-	 * 버퍼를 정규화해 canvas에 선 그래프로 그린다. ECG/가속도 x/y/z 차트가 공통으로 사용한다.
-	 * min/max는 버퍼에서 그때그때 계산하지 않고 채널별 고정값을 받는다 (auto-scale 방지).
-	 */
-	function drawLineChart(canvas, buffer, bufferSize, color, min, max) {
-		var ctx = canvas.getContext("2d");
-		var w = canvas.width;
-		var h = canvas.height;
-		ctx.clearRect(0, 0, w, h);
-		if (buffer.length < 2) {
-			return;
-		}
-		var range = (max - min) || 1;
-		var step = w / (bufferSize - 1);
-		var offset = bufferSize - buffer.length;
-
-		ctx.strokeStyle = color;
-		ctx.lineWidth = 1.5;
-		ctx.beginPath();
-		for (var i = 0; i < buffer.length; i++) {
-			var x = (offset + i) * step;
-			var normalized = (buffer[i] - min) / range;
-			var y = h - normalized * (h - 10) - 5;
-			if (i === 0) {
-				ctx.moveTo(x, y);
-			} else {
-				ctx.lineTo(x, y);
-			}
-		}
-		ctx.stroke();
-	}
-
-	/**
-	 * 가속도 x/y/z를 한 캔버스에 겹쳐 그린다. 세 축이 같은 min/max(ACCEL_MIN~ACCEL_MAX)를
-	 * 공유해서 흔들림 크기를 그대로 비교할 수 있게 하되, 완전히 겹치지 않도록 축마다 픽셀
-	 * 단위로 살짝 어긋나게(offset) 그린다. z축은 중력 성분(ACCEL_Z_BASELINE)을 먼저 빼서
-	 * x/y와 같은 "0 근방 흔들림" 값으로 맞춘 뒤 그린다.
-	 */
-	function drawAccelChart(canvas, bufferX, bufferY, bufferZ, bufferSize) {
-		var ctx = canvas.getContext("2d");
-		ctx.clearRect(0, 0, canvas.width, canvas.height);
-		drawAccelLine(ctx, canvas, bufferX, bufferSize, ACCEL_AXIS_COLORS.x, -ACCEL_LANE_OFFSET_PX, 0);
-		drawAccelLine(ctx, canvas, bufferY, bufferSize, ACCEL_AXIS_COLORS.y, 0, 0);
-		drawAccelLine(ctx, canvas, bufferZ, bufferSize, ACCEL_AXIS_COLORS.z, ACCEL_LANE_OFFSET_PX, ACCEL_Z_BASELINE);
-	}
-
-	function drawAccelLine(ctx, canvas, buffer, bufferSize, color, pixelOffset, valueBaseline) {
-		if (buffer.length < 2) {
-			return;
-		}
-		var w = canvas.width;
-		var h = canvas.height;
-		var range = (ACCEL_MAX - ACCEL_MIN) || 1;
-		var step = w / (bufferSize - 1);
-		var offset = bufferSize - buffer.length;
-
-		ctx.strokeStyle = color;
-		ctx.lineWidth = 1.5;
-		ctx.beginPath();
-		for (var i = 0; i < buffer.length; i++) {
-			var x = (offset + i) * step;
-			var normalized = ((buffer[i] - valueBaseline) - ACCEL_MIN) / range;
-			var y = h - normalized * (h - 10) - 5 + pixelOffset;
-			if (i === 0) {
-				ctx.moveTo(x, y);
-			} else {
-				ctx.lineTo(x, y);
-			}
-		}
-		ctx.stroke();
-	}
-
-	function pluckX(sample) {
-		return sample.x;
-	}
-
-	function pluckY(sample) {
-		return sample.y;
-	}
-
-	function pluckZ(sample) {
-		return sample.z;
-	}
-
 	/** 대상 1건의 카드 UI(상태/ECG 파형/가속도 x·y·z 파형/속도) 렌더링만 담당 */
 	function SubjectCard(subject) {
 		this.subject = subject;
 		this.ecgBuffer = [];
-		this.accelBufferX = [];
-		this.accelBufferY = [];
-		this.accelBufferZ = [];
 		this.lastVelocity = null;
 		this.lastMessageAt = 0;
 		this.element = this._render();
-		this.canvas = this.element.querySelector(".ecg-canvas");
-		this.accelCanvas = this.element.querySelector(".accel-canvas");
+		this.ecgChart = null;
+		this.accelChart = null;
 		// toast로 뜨는 휴식/이상행동 알림은 다음 알림이 올 때까지 계속 떠 있으므로, 클릭하면 직접
 		// 닫을 수 있게 한다. stopPropagation을 안 하면 카드 전체의 클릭(카드 선택/해제)까지 같이
 		// 발생해버리므로 막는다.
@@ -207,10 +119,6 @@
 	}
 
 	SubjectCard.prototype._render = function () {
-		var badgeClass = this.subject.type === "HUMAN" ? "badge-human" : "badge-animal";
-		// 활동 수준(정지/보행/활발한 움직임)·이상행동 경고는 동물(ANIMAL) 대상에만 서버가 분석해
-		// 보내주므로, 사람 대상 카드에는 아예 해당 UI를 만들지 않는다 (서버 쪽 게이팅과 대칭).
-		var isAnimal = this.subject.type === "ANIMAL";
 		var card = document.createElement("div");
 		card.className = "subject-card";
 		card.id = "subject-card-" + this.subject.id;
@@ -220,24 +128,23 @@
 			// 합친다 (이름 쪽은 줄지 않게 flex-shrink:0, 수치 칩들은 남는 공간에서 알아서 줄바꿈).
 			'<div class="subject-card-header">' +
 			'  <div class="subject-identity"><span class="status-dot offline"></span><span class="name"></span> ' +
-			'  <span class="badge ' + badgeClass + '"></span></div>' +
+			'  <span class="badge badge-animal"></span></div>' +
 			'  <div class="vitals-row">' +
 			'    <div>' + MESSAGES.vitalsEcg + ' <div class="value ecg-status">' + MESSAGES.ecgWaiting + '</div></div>' +
 			'    <div>' + MESSAGES.vitalsVelocity + ' <div class="value velocity-value">-</div></div>' +
 			'    <div>' + MESSAGES.vitalsLocation + ' <div class="value loc-status">-</div></div>' +
-			(isAnimal ? '    <div>' + MESSAGES.vitalsActivity + ' <div class="value activity-status">-</div></div>' : '') +
+			'    <div>' + MESSAGES.vitalsActivity + ' <div class="value activity-status">-</div></div>' +
 			'  </div>' +
 			'</div>' +
 			// 휴식/이상행동 알림은 더 이상 카드 높이를 차지하지 않는다 - 카드 우측 상단에 떠 있는
 			// toast로 표시된다 (subject-card가 position:relative라 이 안에서만 절대 위치로 뜬다).
-			(isAnimal ? '<div class="activity-alert" style="display:none;"></div>' : '') +
-			// 캔버스 내부 해상도(width/height 속성)는 CSS가 카드 크기에 맞춰 늘려도(격자 모드에서
-			// 대상이 1~2명이면 카드가 꽤 커진다) 너무 흐려지지 않도록 실제 표시 크기보다 넉넉하게 잡는다.
-			'<canvas class="ecg-canvas" width="600" height="180"></canvas>' +
+			'<div class="activity-alert" style="display:none;"></div>' +
+			// 차트(ECharts)는 컨테이너 크기를 알아야 그릴 수 있으므로, 카드가 패널에 붙은 뒤 mountCharts에서 만든다.
+			'<div class="ecg-chart"></div>' +
 			'<div class="accel-panel">' +
-			'  <canvas class="accel-canvas" width="600" height="140"></canvas>' +
-			// X/Y/Z 범례는 더 이상 캔버스 위 자기 줄을 차지하지 않고, 캔버스 좌측 하단 안쪽에
-			// 겹쳐서(overlay) 떠 있다 - 그만큼 캔버스가 세로로 더 커진다.
+			'  <div class="accel-chart"></div>' +
+			// X/Y/Z 범례는 차트 위 자기 줄을 차지하지 않고, 차트 좌측 하단 안쪽에
+			// 겹쳐서(overlay) 떠 있다 - 그만큼 차트가 세로로 더 커진다.
 			'  <div class="accel-legend">' +
 			'    <span class="accel-axis-label accel-axis-x">X</span>' +
 			'    <span class="accel-axis-label accel-axis-y">Y</span>' +
@@ -245,8 +152,28 @@
 			'  </div>' +
 			'</div>';
 		card.querySelector(".name").textContent = this.subject.name;
-		card.querySelector(".badge").textContent = this.subject.typeLabel;
+		var badge = card.querySelector(".badge");
+		badge.textContent = this.subject.species;
+		badge.style.setProperty("--subject-color", this.subject.color);
 		return card;
+	};
+
+	/** 카드가 DOM에 붙은 뒤(크기가 정해진 뒤) 호출해 ECG/가속도 스윕 차트를 만든다. */
+	SubjectCard.prototype.mountCharts = function () {
+		this.ecgChart = SweepChart.ecg(
+				this.element.querySelector(".ecg-chart"), ECG_DEFAULT_SAMPLING_HZ, ECG_WINDOW_SECONDS);
+		this.accelChart = SweepChart.acceleration(
+				this.element.querySelector(".accel-chart"), ACCEL_DEFAULT_SAMPLING_HZ, ACCEL_WINDOW_SECONDS);
+	};
+
+	/** 차트의 프레임 루프 등록/리사이즈 감시를 해제한다. 카드를 제거할 때 반드시 호출한다. */
+	SubjectCard.prototype.dispose = function () {
+		if (this.ecgChart) {
+			this.ecgChart.dispose();
+		}
+		if (this.accelChart) {
+			this.accelChart.dispose();
+		}
 	};
 
 	SubjectCard.prototype.select = function () {
@@ -275,28 +202,29 @@
 
 	SubjectCard.prototype.onEcg = function (samples, samplingRateHz) {
 		this.markLive();
-		this.element.querySelector(".ecg-status").textContent = MESSAGES.receiving;
-		var bufferSize = Math.round((samplingRateHz || ECG_DEFAULT_SAMPLING_HZ) * ECG_WINDOW_SECONDS);
+		var rate = samplingRateHz || ECG_DEFAULT_SAMPLING_HZ;
+		var bufferSize = Math.round(rate * ECG_WINDOW_SECONDS);
 		this.ecgBuffer = appendAndTrim(this.ecgBuffer, samples, bufferSize);
-		drawLineChart(this.canvas, this.ecgBuffer, bufferSize, ECG_COLOR, ECG_MIN, ECG_MAX);
+		// 심박수는 최근 ECG_WINDOW_SECONDS초 버퍼의 R파 간격으로 추정한다. 버퍼가 아직 짧아
+		// 피크가 2개 미만이면(측정 시작 직후) 계산 가능해질 때까지 "대기 중"으로 둔다.
+		var bpm = VitalsFormat.heartRateBpm(this.ecgBuffer, rate);
+		this.element.querySelector(".ecg-status").textContent = bpm != null ? bpm + " bpm" : MESSAGES.ecgWaiting;
+		// 1초 묶음을 바로 그리지 않고 큐에 넣으면, 차트가 25fps로 나눠 그리며 스윕한다.
+		this.ecgChart.ensureSamplingRate(rate);
+		this.ecgChart.enqueue(samples.map(SweepChart.toEcgRow));
 	};
 
 	/**
-	 * 가속도는 크기(magnitude) 하나로 뭉치지 않고 x/y/z 축을 유지하되, 한 캔버스에 겹쳐 그린다
-	 * (drawAccelChart - 색상으로 구분하고 세 선을 살짝 어긋나게 그려 구분한다).
-	 * 버퍼 크기는 고정 상수가 아니라 이번에 들어온 samplingRateHz 기준으로 매번 계산한다
-	 * (ACCEL_WINDOW_SECONDS초 분량 = samplingRateHz * ACCEL_WINDOW_SECONDS).
+	 * 가속도는 크기(magnitude) 하나로 뭉치지 않고 x/y/z 축을 유지하되, 한 차트에 겹쳐 그린다
+	 * (색상으로 구분하고 세 선을 살짝 어긋나게 그린다 - SweepChart.acceleration).
 	 */
 	SubjectCard.prototype.onAcceleration = function (samples, samplingRateHz) {
 		if (!samples || samples.length === 0) {
 			return;
 		}
 		this.markLive();
-		var bufferSize = Math.round((samplingRateHz || ACCEL_DEFAULT_SAMPLING_HZ) * ACCEL_WINDOW_SECONDS);
-		this.accelBufferX = appendAndTrim(this.accelBufferX, samples.map(pluckX), bufferSize);
-		this.accelBufferY = appendAndTrim(this.accelBufferY, samples.map(pluckY), bufferSize);
-		this.accelBufferZ = appendAndTrim(this.accelBufferZ, samples.map(pluckZ), bufferSize);
-		drawAccelChart(this.accelCanvas, this.accelBufferX, this.accelBufferY, this.accelBufferZ, bufferSize);
+		this.accelChart.ensureSamplingRate(samplingRateHz || ACCEL_DEFAULT_SAMPLING_HZ);
+		this.accelChart.enqueue(samples.map(SweepChart.toAccelRow));
 	};
 
 	SubjectCard.prototype.onVelocity = function (speed) {
@@ -305,7 +233,7 @@
 		this.element.querySelector(".velocity-value").textContent = speed.toFixed(2) + " km/h";
 	};
 
-	/** 동물 대상 카드에만 있는 활동 수준 배지를 갱신한다 (사람 카드는 해당 엘리먼트가 없어 아무 일도 안 함). */
+	/** 활동 수준 배지를 갱신한다. */
 	SubjectCard.prototype.onActivity = function (status) {
 		var el = this.element.querySelector(".activity-status");
 		if (!el) {
@@ -329,9 +257,9 @@
 		el.style.display = "";
 	};
 
-	SubjectCard.prototype.onLocation = function () {
+	SubjectCard.prototype.onLocation = function (latitude, longitude) {
 		this.markLive();
-		this.element.querySelector(".loc-status").textContent = MESSAGES.receiving;
+		this.element.querySelector(".loc-status").textContent = VitalsFormat.coordinates(latitude, longitude);
 	};
 
 	/**
@@ -366,6 +294,7 @@
 			this.cards[subject.id] = card;
 			card.element.addEventListener("click", this.selectSubject.bind(this, subject.id));
 			document.getElementById("signal-panel").appendChild(card.element);
+			card.mountCharts();
 			this._hideEmptyState();
 			if (this.stompClient && this.stompClient.connected) {
 				this.subscriptions[subject.id] = this._subscribeSubjectTopics(subject);
@@ -386,6 +315,7 @@
 				this.clearSelection();
 			}
 			MapView.removeMarker(subjectId);
+			card.dispose();
 			card.element.remove();
 			delete this.cards[subjectId];
 			this._showEmptyStateIfNoneLeft();
@@ -471,8 +401,8 @@
 			var subscriptions = [
 				this.stompClient.subscribe("/topic/subjects/" + id + "/location", function (frame) {
 					var msg = JSON.parse(frame.body);
-					self.cards[id].onLocation();
-					MapView.upsertMarker(id, subject.name, msg.latitude, msg.longitude);
+					self.cards[id].onLocation(msg.latitude, msg.longitude);
+					MapView.upsertMarker(id, subject.name, subject.color, msg.latitude, msg.longitude);
 					if (self.selectedSubjectId === id) {
 						MapView.focusOn(id);
 					}
@@ -488,20 +418,14 @@
 				this.stompClient.subscribe("/topic/subjects/" + id + "/velocity", function (frame) {
 					var msg = JSON.parse(frame.body);
 					self.cards[id].onVelocity(msg.speed);
+				}),
+				this.stompClient.subscribe("/topic/subjects/" + id + "/activity", function (frame) {
+					self.cards[id].onActivity(JSON.parse(frame.body));
+				}),
+				this.stompClient.subscribe("/topic/subjects/" + id + "/alerts", function (frame) {
+					self.cards[id].onAlert(JSON.parse(frame.body));
 				})
 			];
-			// 활동 분석(정지/보행/활발한 움직임, 휴식/이상행동 경고)은 서버가 동물(ANIMAL) 대상에만
-			// 발행하므로, 사람 대상은 애초에 구독하지 않는다 (해당 카드에는 표시할 엘리먼트도 없음).
-			if (subject.type === "ANIMAL") {
-				subscriptions.push(
-					this.stompClient.subscribe("/topic/subjects/" + id + "/activity", function (frame) {
-						self.cards[id].onActivity(JSON.parse(frame.body));
-					}),
-					this.stompClient.subscribe("/topic/subjects/" + id + "/alerts", function (frame) {
-						self.cards[id].onAlert(JSON.parse(frame.body));
-					})
-				);
-			}
 			return subscriptions;
 		},
 

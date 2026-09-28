@@ -24,9 +24,8 @@ public class SubjectController {
 	public String list(@AuthenticationPrincipal MemberPrincipal principal, Model model) {
 		model.addAttribute("subjects", subjectService.findMySubjects(principal.getMemberId()));
 		if (!model.containsAttribute("registerRequest")) {
-			model.addAttribute("registerRequest", new SubjectRegisterRequest("", null, ""));
+			model.addAttribute("registerRequest", new SubjectRegisterRequest("", ""));
 		}
-		model.addAttribute("subjectTypes", SubjectType.values());
 		return "subject/list";
 	}
 
@@ -36,8 +35,7 @@ public class SubjectController {
 			BindingResult bindingResult, Model model) {
 		if (bindingResult.hasErrors()) {
 			model.addAttribute("subjects", subjectService.findMySubjects(principal.getMemberId()));
-			model.addAttribute("subjectTypes", SubjectType.values());
-			return "subject/list";
+				return "subject/list";
 		}
 		subjectService.register(principal.getMemberId(), request);
 		return "redirect:/subjects";

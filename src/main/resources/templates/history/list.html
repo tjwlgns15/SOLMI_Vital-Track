@@ -24,7 +24,7 @@
 			<thead>
 			<tr>
 				<th th:text="#{history.list.column.subject}">대상</th>
-				<th th:text="#{history.list.column.type}">종류</th>
+				<th th:text="#{history.list.column.species}">품종</th>
 				<th th:text="#{history.list.column.startedAt}">시작</th>
 				<th th:text="#{history.list.column.endedAt}">종료</th>
 				<th th:text="#{history.list.column.duration}">측정 시간</th>
@@ -36,8 +36,8 @@
 			<tr th:each="s : ${sessions}">
 				<td th:text="${s.subjectName}"></td>
 				<td>
-					<span class="badge" th:classappend="${s.subjectType.name() == 'HUMAN'} ? 'badge-human' : 'badge-animal'"
-						th:text="${s.subjectTypeLabel}"></span>
+					<span class="badge badge-animal" th:style="'--subject-color: ' + ${s.subjectColor}"
+						th:text="${s.subjectSpecies}"></span>
 				</td>
 				<td th:text="${#temporals.format(s.startedAt, 'yyyy-MM-dd HH:mm:ss')}"></td>
 				<td th:text="${s.endedAt != null} ? ${#temporals.format(s.endedAt, 'yyyy-MM-dd HH:mm:ss')} : '-'"></td>

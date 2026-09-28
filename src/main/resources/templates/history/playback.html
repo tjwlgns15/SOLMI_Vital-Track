@@ -25,10 +25,10 @@
 					<div><span th:text="#{vitals.velocity}">속도</span> <div class="value velocity-value">-</div></div>
 					<div><span th:text="#{vitals.location}">위치</span> <div class="value loc-status">-</div></div>
 				</div>
-				<canvas class="ecg-canvas" id="ecg-canvas" width="700" height="140"></canvas>
+				<div class="ecg-chart" id="ecg-chart"></div>
 				<div class="accel-panel">
-					<canvas class="accel-canvas" id="accel-canvas" width="700" height="110"></canvas>
-					<!-- X/Y/Z legend overlays the bottom-left inside the canvas instead of taking its own row. -->
+					<div class="accel-chart" id="accel-chart"></div>
+					<!-- X/Y/Z legend overlays the bottom-left inside the chart instead of taking its own row. -->
 					<div class="accel-legend">
 						<span class="accel-axis-label accel-axis-x">X</span>
 						<span class="accel-axis-label accel-axis-y">Y</span>
@@ -58,7 +58,6 @@
 	/*<![CDATA[*/
 	var SESSION_ID = /*[[${sessionId}]]*/ 0;
 	var MESSAGES = {
-		playing: /*[[#{playback.js.playing}]]*/ "재생 중",
 		play: /*[[#{playback.button.play}]]*/ "▶ 재생",
 		pause: /*[[#{playback.js.pause}]]*/ "⏸ 일시정지",
 		loadError: /*[[#{playback.js.loadError}]]*/ "재생 데이터를 불러오지 못했습니다",
@@ -67,6 +66,9 @@
 	/*]]>*/
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script th:src="@{/js/vitals-format.js}"></script>
+<script th:src="@{/js/sweep-chart.js}"></script>
 <script th:src="@{/js/playback.js}"></script>
 </body>
 </html>

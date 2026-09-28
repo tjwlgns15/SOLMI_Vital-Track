@@ -16,20 +16,13 @@
 			<form th:action="@{/subjects}" th:object="${registerRequest}" method="post">
 				<div class="form-group">
 					<label for="name" th:text="#{subject.list.label.name}">이름</label>
-					<input type="text" id="name" th:field="*{name}" th:placeholder="#{subject.list.placeholder.name}" placeholder="예: 홍길동, 초코(강아지)" required>
+					<input type="text" id="name" th:field="*{name}" th:placeholder="#{subject.list.placeholder.name}" placeholder="예: 초코" required>
 					<p class="error-text" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></p>
 				</div>
 				<div class="form-group">
-					<label for="type" th:text="#{subject.list.label.type}">종류</label>
-					<select id="type" th:field="*{type}" required>
-						<option value="" th:text="#{subject.list.placeholder.type}">선택해주세요</option>
-						<option th:each="t : ${subjectTypes}" th:value="${t}" th:text="#{${'subjectType.' + t}}"></option>
-					</select>
-					<p class="error-text" th:if="${#fields.hasErrors('type')}" th:errors="*{type}"></p>
-				</div>
-				<div class="form-group">
-					<label for="species" th:text="#{subject.list.label.species}">품종/비고 (동물인 경우)</label>
-					<input type="text" id="species" th:field="*{species}" th:placeholder="#{subject.list.placeholder.species}" placeholder="예: 골든리트리버">
+					<label for="species" th:text="#{subject.list.label.species}">품종</label>
+					<input type="text" id="species" th:field="*{species}" th:placeholder="#{subject.list.placeholder.species}" placeholder="예: 골든리트리버" maxlength="50" required>
+					<p class="error-text" th:if="${#fields.hasErrors('species')}" th:errors="*{species}"></p>
 				</div>
 				<button type="submit" class="btn" th:text="#{subject.list.button.register}">등록</button>
 			</form>
@@ -44,18 +37,16 @@
 				<thead>
 				<tr>
 					<th th:text="#{subject.list.column.name}">이름</th>
-					<th th:text="#{subject.list.column.type}">종류</th>
-					<th th:text="#{subject.list.column.species}">품종/비고</th>
+					<th th:text="#{subject.list.column.species}">품종</th>
 				</tr>
 				</thead>
 				<tbody>
 				<tr th:each="s : ${subjects}">
 					<td th:text="${s.name}"></td>
 					<td>
-						<span class="badge" th:classappend="${s.type.name() == 'HUMAN'} ? 'badge-human' : 'badge-animal'"
-							th:text="${s.typeLabel}"></span>
+						<span class="badge badge-animal" th:style="'--subject-color: ' + ${s.color}"
+							th:text="${s.species}"></span>
 					</td>
-					<td th:text="${s.species} ?: '-'"></td>
 				</tr>
 				</tbody>
 			</table>

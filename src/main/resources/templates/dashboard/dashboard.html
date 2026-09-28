@@ -36,14 +36,16 @@
 		vitalsLocation: /*[[#{vitals.location}]]*/ "위치",
 		vitalsActivity: /*[[#{vitals.activity}]]*/ "활동",
 		ecgWaiting: /*[[#{dashboard.js.ecgWaiting}]]*/ "대기 중",
-		ecgNoSignal: /*[[#{dashboard.js.ecgNoSignal}]]*/ "신호 없음",
-		receiving: /*[[#{dashboard.js.receiving}]]*/ "수신 중"
+		ecgNoSignal: /*[[#{dashboard.js.ecgNoSignal}]]*/ "신호 없음"
 	};
 	/*]]>*/
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script th:src="@{/js/vitals-format.js}"></script>
+<script th:src="@{/js/sweep-chart.js}"></script>
 <script th:src="@{/js/dashboard.js}"></script>
 </body>
 </html>

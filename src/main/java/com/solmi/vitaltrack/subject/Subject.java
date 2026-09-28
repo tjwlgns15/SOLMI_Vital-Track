@@ -4,8 +4,6 @@ import com.solmi.vitaltrack.common.BaseTimeEntity;
 import com.solmi.vitaltrack.member.Member;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -18,7 +16,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * 측정 대상(사람 또는 동물). 반드시 소유자(Member)에 귀속된다.
+ * 측정 대상(동물). 반드시 소유자(Member)에 귀속된다.
  * 대상의 등록/소유 검증 책임을 엔티티 스스로가 지도록 하여 서비스 레이어가
  * 도메인 규칙을 흩어놓지 않게 한다 (SRP).
  */
@@ -39,28 +37,26 @@ public class Subject extends BaseTimeEntity {
 	@Column(nullable = false, length = 50)
 	private String name;
 
-	@Enumerated(EnumType.STRING)
-	@Column(nullable = false, length = 20)
-	private SubjectType type;
-
-	@Column(length = 50)
+	@Column(nullable = false, length = 50)
 	private String species;
 
-	private Subject(Member owner, String name, SubjectType type, String species) {
+	private Subject(Member owner, String name, String species) {
 		this.owner = owner;
 		this.name = name;
-		this.type = type;
 		this.species = species;
 	}
 
-	public static Subject register(Member owner, String name, SubjectType type, String species) {
+	public static Subject register(Member owner, String name, String species) {
 		if (owner == null) {
 			throw new IllegalArgumentException("측정 대상은 보호자(계정)에 귀속되어야 합니다");
 		}
 		if (name == null || name.isBlank()) {
 			throw new IllegalArgumentException("측정 대상 이름은 필수입니다");
 		}
-		return new Subject(owner, name, type, species);
+		if (species == null || species.isBlank()) {
+			throw new IllegalArgumentException("측정 대상 품종은 필수입니다");
+		}
+		return new Subject(owner, name, species);
 	}
 
 	public boolean isOwnedBy(Long memberId) {

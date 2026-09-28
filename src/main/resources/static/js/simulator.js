@@ -232,7 +232,7 @@
 				subjects.forEach(function (subject) {
 					var option = document.createElement("option");
 					option.value = subject.id;
-					option.textContent = subject.name + " (" + subject.typeLabel + ")";
+					option.textContent = subject.name + " (" + subject.species + ")";
 					self.select.appendChild(option);
 				});
 				self.controlsEl.style.display = "";
