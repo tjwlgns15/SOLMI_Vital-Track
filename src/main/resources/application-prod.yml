@@ -1,0 +1,41 @@
+# 운영 PC 설정. 실행: java -jar vital-track-<버전>.jar --spring.profiles.active=prod
+#
+# 비밀값(DB 계정, JWT 키)은 이 파일에 적지 않고 운영 PC에서 주입한다. 둘 중 한 가지 방법을 쓴다.
+#   1) 환경변수: DB_HOST, DB_PORT, DB_NAME, DB_USERNAME, DB_PASSWORD, JWT_SECRET, (선택) SERVER_PORT
+#   2) jar와 같은 폴더의 config/application-prod.yml (이 파일보다 우선 적용된다. 저장소에 올리지 않는다)
+#        spring:
+#          datasource:
+#            username: vitaltrack
+#            password: <운영 DB 비밀번호>
+#        app:
+#          jwt:
+#            secret: <운영 JWT 키>
+#
+# DB_USERNAME, DB_PASSWORD, JWT_SECRET은 기본값이 없어서, 주입하지 않으면 서버가 뜨지 않는다
+# (설정이 빠진 채로 운영되는 것을 막기 위함).
+#   - DB 계정이 없으면: Access denied for user '${DB_USERNAME}' 로 시작 실패
+#   - JWT 키가 없거나 32바이트 미만이면: JwtProperties 검증에서 시작 실패
+
+server:
+  port: ${SERVER_PORT:8027}
+
+spring:
+  datasource:
+    # 운영 DB와 계정은 미리 만들어 둔다 (createDatabaseIfNotExist를 쓰지 않으므로 DB 생성 권한은 필요 없다).
+    # 테이블은 서버가 처음 뜰 때 Flyway가 db/migration 스크립트로 만든다.
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:13306}/${DB_NAME:Quet_VitalTrack}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  thymeleaf:
+    cache: true
+
+app:
+  jwt:
+    # HMAC-SHA 서명 키. 문자열의 UTF-8 바이트를 그대로 키로 쓰므로 32바이트(영문 32자) 이상이어야 한다.
+    # 생성 예: openssl rand -base64 48
+    secret: ${JWT_SECRET}
+
+logging:
+  level:
+    com.solmi.vitaltrack: info

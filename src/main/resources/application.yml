@@ -1,3 +1,8 @@
+# 모든 환경이 공유하는 설정. 환경마다 달라지는 값(DB 접속 정보, 포트, JWT 키, 로그 레벨 등)은
+# 프로필 파일에 둔다.
+#   - application-local.yml : 개발 PC (프로필을 지정하지 않으면 이 프로필로 뜬다)
+#   - application-prod.yml  : 운영 PC (--spring.profiles.active=prod 로 실행)
+
 server:
   port: 8027
 
@@ -5,10 +10,9 @@ spring:
   application:
     name: vital-track
 
-  datasource:
-    url: jdbc:mysql://localhost:3308/vital_track?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-    username: root
-    password: 1234
+  profiles:
+    # 프로필 없이 실행하면(IDE 실행, 테스트) 개발 설정을 쓴다. 운영에서는 반드시 prod를 명시한다.
+    default: local
 
   flyway:
     # 기존에는 Hibernate의 ddl-auto: update가 스키마를 알아서 맞춰왔지만, 이제부터는
@@ -29,17 +33,8 @@ spring:
         format_sql: true
     show-sql: false
 
-  thymeleaf:
-    cache: false
-
 app:
   jwt:
-    # 데모/개발용으로 무작위 생성해 넣어둔 값입니다. 운영 환경에서는 반드시 환경변수 등으로
-    # 외부에서 주입하고(예: JWT_SECRET), 이 파일에 평문으로 커밋하지 마세요.
-    secret: "XKGg3roFZMKhMp76h4M0kDTaNy7TS7s6ZJsd99+X5ld6PmuWbsAp/PPB0ZT2vVsG"
+    # 서명 키(app.jwt.secret)는 환경마다 다른 값을 쓰므로 프로필 파일에서 정한다.
     access-token-validity-seconds: 1800       # 30분 - 짧게 유지하고 재발급(refresh)으로 연장
     refresh-token-validity-seconds: 1209600   # 14일 - DB에 저장되어 있어 로그아웃 시 즉시 폐기 가능
-
-logging:
-  level:
-    com.solmi.vitaltrack: debug

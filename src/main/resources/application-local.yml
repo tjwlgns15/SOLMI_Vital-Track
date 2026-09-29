@@ -1,0 +1,22 @@
+# 개발 PC 설정. 프로필을 지정하지 않으면 이 파일이 적용된다 (application.yml의 spring.profiles.default).
+# 여기 있는 계정/키는 개발용이며 운영에서 쓰면 안 된다.
+
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3308/vital_track?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: root
+    password: 1234
+
+  thymeleaf:
+    # 템플릿을 고치면 재시작 없이 바로 반영되도록 캐시를 끈다.
+    cache: false
+
+app:
+  jwt:
+    # 개발용으로 무작위 생성해 넣어둔 값이다. 이미 저장소에 공개되어 있으므로 운영에서는
+    # 절대 쓰지 않는다 (운영 값은 application-prod.yml 참고).
+    secret: "XKGg3roFZMKhMp76h4M0kDTaNy7TS7s6ZJsd99+X5ld6PmuWbsAp/PPB0ZT2vVsG"
+
+logging:
+  level:
+    com.solmi.vitaltrack: debug

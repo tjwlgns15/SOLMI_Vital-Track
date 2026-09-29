@@ -31,6 +31,8 @@ bin/
 Thumbs.db
 
 ### VitalTrack ###
+# 운영 PC에서 jar 옆에 두는 외부 설정(DB 계정, JWT 키). 저장소에 올리지 않는다.
+/config/
 data/
 *.mv.db
 *.trace.db
