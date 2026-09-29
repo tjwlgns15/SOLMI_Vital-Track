@@ -281,12 +281,12 @@ var SweepChart = (function () {
 	// y축은 버퍼의 순간 min/max로 auto-scale하지 않고 채널별 고정 범위로 그린다
 	// (auto-scale은 미세한 노이즈도 큰 변화처럼 보이게 만들고, 채널마다 스케일이 달라 비교가 어려움).
 	// ECG: 시뮬레이터 기준 대략 -0.28~1.02 (R파 피크 ~1.0) -> -1.0~2.0, 임상 모니터처럼 초록색.
-	var ECG_COLOR = "#4CAF50";
+	var ECG_COLOR = "#19D3C5";
 	var ECG_MIN = -1.0, ECG_MAX = 2.0;
 	// 가속도 x/y/z는 한 차트에 겹쳐 그리므로 같은 축척을 공유한다. z축만 중력(약 9.8) 성분이
 	// 실려 있어 ACCEL_Z_BASELINE만큼 빼서 x/y와 같은 "0 근방 흔들림" 값으로 맞춘다.
 	// 세 선이 완전히 겹치지 않도록 값 단위로 살짝 어긋나게(lane offset) 그린다.
-	var ACCEL_AXIS_COLORS = {x: "#2f5d8f", y: "#703013", z: "#146b4f"};
+	var ACCEL_AXIS_COLORS = {x: "#2f5d8f", y: "#9c6485", z: "#146b4f"};
 	var ACCEL_MIN = -2, ACCEL_MAX = 2;
 	var ACCEL_Z_BASELINE = 9.8;
 	var ACCEL_LANE_OFFSET = 0.4;
