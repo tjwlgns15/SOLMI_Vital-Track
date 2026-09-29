@@ -12,7 +12,11 @@
 	var BASE_LNG = 126.9780;
 	var ECG_SAMPLING_HZ = 250;
 	var ECG_BATCH_SIZE = 250; // 1초마다 250샘플(=250Hz) 전송
-	var HEART_RATE_BPM = 72;
+	// 심박수는 기준값 근처에서 1초마다 조금씩 오르내린다(랜덤 워크). 파형의 박동 간격도 같은 값을 쓴다.
+	var HEART_RATE_BASE_BPM = 72;
+	var HEART_RATE_MIN_BPM = 64;
+	var HEART_RATE_MAX_BPM = 82;
+	var HEART_RATE_STEP_BPM = 1.5; // 1초당 최대 변화량(±)
 	var ACCEL_SAMPLING_HZ = 50;
 	var ACCEL_BATCH_SIZE = 50; // ECG와 동일하게 1초마다 50샘플(=50Hz) 묶음 전송
 	// "이상행동(뒤척임)" 모드에서 정지<->격한 움직임을 오가는 주기.
@@ -80,6 +84,7 @@
 		this.lat = BASE_LAT;
 		this.lng = BASE_LNG;
 		this.ecgPhase = 0;
+		this.heartRate = HEART_RATE_BASE_BPM;
 		this.velocity = 1.2 + Math.random() * 0.4; // 도보 속도(m/s) 근방에서 시작
 		// 가속도 시뮬레이션 모드: WALK(기본 보행) | REST(정지 상태) | ABNORMAL(이상행동/뒤척임).
 		// 위치/ECG/속도는 그대로 두고 가속도 파형만 모드에 따라 다르게 생성한다 - 서버의 활동 분석
@@ -103,9 +108,17 @@
 		return {latitude: this.lat, longitude: this.lng};
 	};
 
+	/** 심박수를 한 걸음 움직인다. 1초마다 ECG 배치를 만들기 전에 부른다. */
+	VitalSignalGenerator.prototype.nextHeartRate = function () {
+		this.heartRate += (Math.random() - 0.5) * 2 * HEART_RATE_STEP_BPM;
+		this.heartRate = Math.max(HEART_RATE_MIN_BPM, Math.min(HEART_RATE_MAX_BPM, this.heartRate));
+		return Math.round(this.heartRate);
+	};
+
+	/** 현재 심박수(this.heartRate)의 박동 간격으로 1초 분량의 ECG 파형을 만든다. */
 	VitalSignalGenerator.prototype.nextEcgBatch = function () {
 		var samples = [];
-		var beatDurationSec = 60 / HEART_RATE_BPM;
+		var beatDurationSec = 60 / this.heartRate;
 		var phaseStep = (1 / ECG_SAMPLING_HZ) / beatDurationSec;
 		for (var i = 0; i < ECG_BATCH_SIZE; i++) {
 			samples.push(this._ecgValueAt(this.ecgPhase) + (Math.random() - 0.5) * 0.03);
@@ -308,10 +321,13 @@
 			}, 1000));
 
 			this.timers.push(setInterval(function () {
+				// 심박수를 먼저 정해야 파형의 박동 간격이 보내는 값과 일치한다.
+				var heartRate = self.generator.nextHeartRate();
 				self._publish("/app/subjects/" + subjectId + "/ecg", {
 					subjectId: Number(subjectId),
 					samples: self.generator.nextEcgBatch(),
 					samplingRateHz: ECG_SAMPLING_HZ,
+					heartRate: heartRate,
 					measuredAt: new Date().toISOString()
 				});
 			}, 1000));

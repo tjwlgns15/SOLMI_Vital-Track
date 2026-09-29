@@ -123,6 +123,7 @@
 		return {
 			location: latestUpTo(this.locations, timeMs),
 			velocity: latestUpTo(this.velocities, timeMs),
+			ecgBatch: latestUpTo(this.ecgBatches, timeMs),
 			ecg: this.ecgTimeline.upTo(timeMs, this.ecgWindowSize),
 			ecgSamplingRateHz: this.ecgSamplingRateHz,
 			accel: this.accelTimeline.upTo(timeMs, this.accelWindowSize)
@@ -197,8 +198,9 @@
 				document.querySelector(".velocity-value").textContent = state.velocity.speed.toFixed(2) + " km/h";
 			}
 
-			// 대시보드와 같은 방식으로, 재생 시점까지의 최근 ECG 버퍼에서 R파 간격으로 심박수를 추정한다.
-			var bpm = VitalsFormat.heartRateBpm(state.ecg.samples, state.ecgSamplingRateHz);
+			// 대시보드와 같이, 재생 시점까지 가장 최근 ECG 배치에 저장된 심박수를 보여준다.
+			// 심박수 컬럼이 생기기 전의 기록처럼 값이 없으면 "-"로 둔다.
+			var bpm = state.ecgBatch ? state.ecgBatch.heartRate : null;
 			document.querySelector(".ecg-status").textContent = bpm != null ? bpm + " bpm" : "-";
 			this.ecgChart.renderUpTo(state.ecg.samples.map(SweepChart.toEcgRow), state.ecg.endIndex);
 		}

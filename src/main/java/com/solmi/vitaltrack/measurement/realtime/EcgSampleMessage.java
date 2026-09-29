@@ -11,6 +11,7 @@ public record EcgSampleMessage(
 		Long subjectId,
 		List<Double> samples,
 		int samplingRateHz,
+		Integer heartRate,
 		Instant measuredAt
 ) {
 }

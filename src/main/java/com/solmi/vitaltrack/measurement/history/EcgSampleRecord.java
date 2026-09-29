@@ -43,6 +43,10 @@ public class EcgSampleRecord extends BaseTimeEntity {
 	@Getter
 	private int samplingRateHz;
 
+	// 기기가 보낸 심박수(bpm). 컬럼 추가(V4) 전 기록이나 심박수를 보내지 않는 기기의 기록은 null이다.
+	@Getter
+	private Integer heartRate;
+
 	// @Lob만으로는 MySQL에서 의도한 대로 큰 텍스트 컬럼이 생성되지 않을 수 있어
 	// (짧은 길이로 생성되어 "Data too long" 오류가 났던 적이 있음) 타입을 명시적으로 고정한다.
 	@Column(nullable = false, columnDefinition = "LONGTEXT")
@@ -53,15 +57,18 @@ public class EcgSampleRecord extends BaseTimeEntity {
 	@Getter
 	private LocalDateTime measuredAt;
 
-	private EcgSampleRecord(MeasurementSession session, List<Double> samples, int samplingRateHz, LocalDateTime measuredAt) {
+	private EcgSampleRecord(MeasurementSession session, List<Double> samples, int samplingRateHz,
+			Integer heartRate, LocalDateTime measuredAt) {
 		this.session = session;
 		this.samplesCsv = encode(samples);
 		this.samplingRateHz = samplingRateHz;
+		this.heartRate = heartRate;
 		this.measuredAt = measuredAt;
 	}
 
-	public static EcgSampleRecord of(MeasurementSession session, List<Double> samples, int samplingRateHz, LocalDateTime measuredAt) {
-		return new EcgSampleRecord(session, samples, samplingRateHz, measuredAt);
+	public static EcgSampleRecord of(MeasurementSession session, List<Double> samples, int samplingRateHz,
+			Integer heartRate, LocalDateTime measuredAt) {
+		return new EcgSampleRecord(session, samples, samplingRateHz, heartRate, measuredAt);
 	}
 
 	public List<Double> getSamples() {

@@ -85,22 +85,9 @@
 		}
 	};
 
-	/**
-	 * 버퍼(배열)에 새 값을 이어붙이고 최대 길이를 넘으면 오래된 값부터 잘라낸다.
-	 * 심박수 계산용 최근 ECG 버퍼를 "최근 N개만 유지"하는 데 쓴다.
-	 */
-	function appendAndTrim(buffer, values, maxSize) {
-		var merged = buffer.concat(values);
-		if (merged.length > maxSize) {
-			merged = merged.slice(merged.length - maxSize);
-		}
-		return merged;
-	}
-
 	/** 대상 1건의 카드 UI(상태/ECG 파형/가속도 x·y·z 파형/속도) 렌더링만 담당 */
 	function SubjectCard(subject) {
 		this.subject = subject;
-		this.ecgBuffer = [];
 		this.lastVelocity = null;
 		this.lastMessageAt = 0;
 		this.element = this._render();
@@ -200,15 +187,11 @@
 		}
 	};
 
-	SubjectCard.prototype.onEcg = function (samples, samplingRateHz) {
+	SubjectCard.prototype.onEcg = function (samples, samplingRateHz, heartRate) {
 		this.markLive();
 		var rate = samplingRateHz || ECG_DEFAULT_SAMPLING_HZ;
-		var bufferSize = Math.round(rate * ECG_WINDOW_SECONDS);
-		this.ecgBuffer = appendAndTrim(this.ecgBuffer, samples, bufferSize);
-		// 심박수는 최근 ECG_WINDOW_SECONDS초 버퍼의 R파 간격으로 추정한다. 버퍼가 아직 짧아
-		// 피크가 2개 미만이면(측정 시작 직후) 계산 가능해질 때까지 "대기 중"으로 둔다.
-		var bpm = VitalsFormat.heartRateBpm(this.ecgBuffer, rate);
-		this.element.querySelector(".ecg-status").textContent = bpm != null ? bpm + " bpm" : MESSAGES.ecgWaiting;
+		// 심박수는 기기가 ECG 배치와 함께 보낸 값을 그대로 보여준다. 보내지 않은 배치면 "-"로 둔다.
+		this.element.querySelector(".ecg-status").textContent = heartRate != null ? heartRate + " bpm" : "-";
 		// 1초 묶음을 바로 그리지 않고 큐에 넣으면, 차트가 25fps로 나눠 그리며 스윕한다.
 		this.ecgChart.ensureSamplingRate(rate);
 		this.ecgChart.enqueue(samples.map(SweepChart.toEcgRow));
@@ -409,7 +392,7 @@
 				}),
 				this.stompClient.subscribe("/topic/subjects/" + id + "/ecg", function (frame) {
 					var msg = JSON.parse(frame.body);
-					self.cards[id].onEcg(msg.samples, msg.samplingRateHz);
+					self.cards[id].onEcg(msg.samples, msg.samplingRateHz, msg.heartRate);
 				}),
 				this.stompClient.subscribe("/topic/subjects/" + id + "/acceleration", function (frame) {
 					var msg = JSON.parse(frame.body);

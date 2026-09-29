@@ -44,7 +44,8 @@ public class MeasurementHistoryService {
 	@Transactional
 	public void recordEcg(MeasurementSession session, EcgSampleMessage message) {
 		ecgSampleRecordRepository.save(
-				EcgSampleRecord.of(session, message.samples(), message.samplingRateHz(), toLocalDateTime(message.measuredAt())));
+				EcgSampleRecord.of(session, message.samples(), message.samplingRateHz(), message.heartRate(),
+						toLocalDateTime(message.measuredAt())));
 	}
 
 	@Transactional
@@ -87,7 +88,8 @@ public class MeasurementHistoryService {
 		List<PlaybackResponse.EcgBatch> ecgBatches = ecgSampleRecordRepository.findBySessionOrderByMeasuredAtAsc(session)
 				.stream()
 				.map(record -> new PlaybackResponse.EcgBatch(
-						record.getSamples(), record.getSamplingRateHz(), offsetMs(baseline, record.getMeasuredAt())))
+						record.getSamples(), record.getSamplingRateHz(), record.getHeartRate(),
+						offsetMs(baseline, record.getMeasuredAt())))
 				.toList();
 
 		List<PlaybackResponse.AccelerationBatch> accelerations = accelerationRecordRepository.findBySessionOrderByMeasuredAtAsc(session)

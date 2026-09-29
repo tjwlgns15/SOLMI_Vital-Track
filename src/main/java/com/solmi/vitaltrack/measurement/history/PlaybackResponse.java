@@ -17,7 +17,8 @@ public record PlaybackResponse(
 	public record LocationPoint(double latitude, double longitude, long offsetMs) {
 	}
 
-	public record EcgBatch(List<Double> samples, int samplingRateHz, long offsetMs) {
+	/** heartRate는 기기가 보낸 심박수(bpm)이고, 값이 없던 기록은 null이다. */
+	public record EcgBatch(List<Double> samples, int samplingRateHz, Integer heartRate, long offsetMs) {
 	}
 
 	public record AccelerationBatch(List<AccelerationSample> samples, int samplingRateHz, long offsetMs) {
