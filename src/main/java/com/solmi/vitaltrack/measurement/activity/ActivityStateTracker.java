@@ -6,6 +6,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.springframework.stereotype.Component;
 
 /**
@@ -22,8 +23,15 @@ public class ActivityStateTracker {
 	private final Map<Long, ActivityHistory> historyBySessionId = new ConcurrentHashMap<>();
 
 	public ActivityUpdateResult record(Long sessionId, ActivityLevel level, Instant now) {
-		ActivityHistory history = historyBySessionId.computeIfAbsent(sessionId, id -> new ActivityHistory(level, now));
-		return history.update(level, now);
+		AtomicBoolean created = new AtomicBoolean();
+		ActivityHistory history = historyBySessionId.computeIfAbsent(sessionId, id -> {
+			created.set(true);
+			return new ActivityHistory(level, now);
+		});
+		ActivityUpdateResult result = history.update(level, now);
+		// 세션의 첫 판정은 이력을 그 수준으로 만든 직후라 levelChanged=false로 나온다. 그대로 두면
+		// 대시보드가 다음 변화 전까지 활동 수준을 받지 못하므로("-"), 첫 판정은 변화로 알린다.
+		return created.get() ? result.asFirstReading() : result;
 	}
 
 	public void forget(Long sessionId) {
@@ -117,4 +125,11 @@ record ActivityUpdateResult(
 		boolean sustainedRestNewlyDetected,
 		int restTransitionsInWindow,
 		boolean abnormalTransitionNewlyDetected) {
+
+	/** 세션의 첫 판정 결과. 이전 수준이 없으므로 수준이 정해진 것 자체를 변화로 본다. */
+	ActivityUpdateResult asFirstReading() {
+		return new ActivityUpdateResult(
+				true, currentLevel, currentLevelDuration,
+				sustainedRestNewlyDetected, restTransitionsInWindow, abnormalTransitionNewlyDetected);
+	}
 }
