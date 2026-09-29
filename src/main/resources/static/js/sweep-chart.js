@@ -283,12 +283,12 @@ var SweepChart = (function () {
 	// ECG: 시뮬레이터 기준 대략 -0.28~1.02 (R파 피크 ~1.0) -> -1.0~2.0, 임상 모니터처럼 초록색.
 	var ECG_COLOR = "#19D3C5";
 	var ECG_MIN = -1.0, ECG_MAX = 2.0;
-	// 가속도 x/y/z는 한 차트에 겹쳐 그리므로 같은 축척을 공유한다. z축만 중력(약 9.8) 성분이
-	// 실려 있어 ACCEL_Z_BASELINE만큼 빼서 x/y와 같은 "0 근방 흔들림" 값으로 맞춘다.
+	// 가속도 x/y/z는 한 차트에 겹쳐 그리므로 같은 축척을 공유한다. 기기는 g 단위로 보내므로
+	// 가만히 있을 때 중력 성분이 어느 축에 실려도 -1~+1 안에 있다 (예: z ≈ -1). 중력을 따로 빼지
+	// 않고 받은 값을 그대로 그린다 (m/s² 단위로 z ≈ +9.8을 보내는 시뮬레이터 값은 범위를 벗어난다).
 	// 세 선이 완전히 겹치지 않도록 값 단위로 살짝 어긋나게(lane offset) 그린다.
 	var ACCEL_AXIS_COLORS = {x: "#2f5d8f", y: "#9c6485", z: "#146b4f"};
 	var ACCEL_MIN = -2, ACCEL_MAX = 2;
-	var ACCEL_Z_BASELINE = 9.8;
 	var ACCEL_LANE_OFFSET = 0.4;
 
 	/** ECG 차트. 샘플 한 건 = [value] */
@@ -315,7 +315,7 @@ var SweepChart = (function () {
 			series: [
 				{color: ACCEL_AXIS_COLORS.x, transform: function (v) { return v + ACCEL_LANE_OFFSET; }},
 				{color: ACCEL_AXIS_COLORS.y},
-				{color: ACCEL_AXIS_COLORS.z, transform: function (v) { return v - ACCEL_Z_BASELINE - ACCEL_LANE_OFFSET; }}
+				{color: ACCEL_AXIS_COLORS.z, transform: function (v) { return v - ACCEL_LANE_OFFSET; }}
 			]
 		});
 	};

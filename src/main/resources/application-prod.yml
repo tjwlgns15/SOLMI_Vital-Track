@@ -17,7 +17,7 @@
 #   - JWT 키가 없거나 32바이트 미만이면: JwtProperties 검증에서 시작 실패
 
 server:
-  port: ${SERVER_PORT:8027}
+  port: ${SERVER_PORT:28096}
 
 spring:
   datasource:
