@@ -42,13 +42,13 @@
 			</svg>
 			<span th:text="#{nav.report}">활동 리포트</span>
 		</a>
-		<a th:href="@{/simulator}">
-			<svg class="nav-icon" width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-				<rect x="6" y="2" width="8" height="16" rx="2" stroke="currentColor" stroke-width="1.7"/>
-				<path d="M9 14.7h2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
-			</svg>
-			<span th:text="#{nav.simulator}">시뮬레이터(폰 대체)</span>
-		</a>
+<!--		<a th:href="@{/simulator}">-->
+<!--			<svg class="nav-icon" width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">-->
+<!--				<rect x="6" y="2" width="8" height="16" rx="2" stroke="currentColor" stroke-width="1.7"/>-->
+<!--				<path d="M9 14.7h2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>-->
+<!--			</svg>-->
+<!--			<span th:text="#{nav.simulator}">시뮬레이터(폰 대체)</span>-->
+<!--		</a>-->
 		<!-- 선택한 언어로 현재 페이지를 다시 요청한다(?lang=ko|en) - LocaleChangeInterceptor가
 		     이 파라미터를 보고 쿠키(LOCALE)를 갱신하므로, 이후 페이지 이동에서는 이 파라미터 없이도 유지된다. -->
 		<select class="lang-select" aria-label="language" onchange="location.href=(location.pathname + '?lang=' + this.value)">
